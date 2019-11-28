@@ -1,0 +1,282 @@
+\documentclass[9pt, a4paper]{extarticle}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{bcprules, proof}
+\usepackage{fancybox}
+\usepackage{mathtools}
+\usepackage{float}
+\usepackage[truedimen,margin=15truemm]{geometry}
+\usepackage{color}
+\usepackage{xparse}
+\usepackage{ebproof}
+\usepackage{lscape}
+
+% \theoremstyle{definition}
+% \newtheoremstyle{break}
+%   {\topsep}{\topsep}%
+%   {\itshape}{}%
+
+%   {\bfseries}{}%
+%   {\newline}{}%
+
+\newtheoremstyle{break}
+  {\topsep}{\topsep}%
+  {}{}%
+  {\bfseries}{}%
+  {\newline}{}%
+\theoremstyle{break}
+\newtheorem{thm}{Theorem}
+\newtheorem{ex}{Example}
+
+% \input{defs}
+% utils
+\newcommand{\rulefbox}[1]{\fbox{\ensuremath{#1}} \hspace{1mm}}
+
+\newcommand{\figheader}[2]
+{\begin{flushleft}
+    #2 {\bf \normalsize #1}
+\end{flushleft}}
+
+\newcommand\doubleplus{+\kern-1.3ex+\kern0.8ex}
+
+\newcommand{\G}{\Gamma}
+\newcommand{\D}{\Delta}
+\newcommand{\V}{\vdash}
+\newcommand{\TW}{\triangleright}
+\newcommand{\TWL}{\triangleleft}
+\newcommand{\F}{\forall}
+\newcommand{\TB}{\blacktriangleright}
+\newcommand{\TBL}{\blacktriangleleft}
+\newcommand{\E}{\equiv}
+\newcommand{\FV}{\text{FV}}
+\newcommand{\FTV}{\text{FTV}}
+
+\newcommand{\bt}[1]{{\texttt{#1}}}
+
+\newcommand{\eif}[1]{\bt{(if}#1\bt{)}}
+\newcommand{\elam}[2]{\bt{(lambda [}#1\bt{]} #2\bt{)}}
+\newcommand{\eapp}[1]{\bt{(}#1\bt{)}}
+\newcommand{\etup}[1]{\bt{[}#1\bt{]}}
+\newcommand{\ecol}[1]{\bt{\{}#1\bt{\}}}
+\newcommand{\eadt}[1]{{\bf{\langle}}#1{\bf{\rangle}}}
+\newcommand{\elet}[1]{\bt{(let}#1\bt{)}}
+\newcommand{\erec}[1]{\bt{(letrec}#1\bt{)}}
+\newcommand{\esome}{\bt{something}}
+\newcommand{\ematchall}[1]{\bt{(match-all } #1\bt{)}}
+\newcommand{\ematch}[1]{\bt{(match } #1\bt{)}}
+\newcommand{\ematcher}[1]{\bt{(matcher } #1\bt{)}}
+
+\newcommand{\enothing}{\bt{Nothing}}
+\newcommand{\ejust}[1]{\bt{(Just } #1\bt{)}}
+
+\newcommand{\tstr}{\bt{String}}
+\newcommand{\tnum}{\bt{Integer}}
+\newcommand{\tint}{\bt{Int}}
+\newcommand{\tbool}{\bt{Bool}}
+\newcommand{\tfun}[2]{#1\to#2}
+% \newcommand{\ttup}[1]{\bt{(Tuple }#1\bt{)}}
+\newcommand{\ttup}[1]{\bt{[}#1\bt{]}}
+% \newcommand{\tcol}[1]{\bt{(Collection }#1\bt{)}}
+\newcommand{\tcol}[1]{\bt{\{}#1\bt{\}}}
+\newcommand{\tpat}[1]{\bt{(Pattern }#1\bt{)}}
+\newcommand{\tpppat}[1]{\bt{(PPPattern }#1\bt{)}}
+\newcommand{\tpdpat}[1]{\bt{(PDPattern }#1\bt{)}}
+
+\newcommand{\tmatcher}[1]{\bt{(Matcher }#1\bt{)}}
+\newcommand{\tmatcherclause}[1]{\bt{(MatcherClause }#1\bt{)}}
+
+\begin{document}
+
+\section{Grammar}
+\label{sec:egison-syntax}
+
+$c$ is a character, $s$ is a string, $n$ is a constant number, $b$ is boolean,
+$C$ is a constructor of algebraic data, $C_p$ is a constructor of algebraic
+pattern,$C_{dp}$ is a constructor of algebraic pattern.
+
+\begin{align*}
+  {\bf{expressions}} & &\\
+    M,N & ::=  x \mid c \mid s \mid b \mid n & \text{variables and constants}\\
+      & \mid \eif{\ M\ M\ M} &\\
+      & \mid \elam{{\bt{\$}}x\ \bt{\$}y\ ...}{\ M} & \text{abstraction}\\ 
+      & \mid \eapp{M\ M\ ...} & \text{application}\\
+      & \mid \etup{M\ ...} & \text{tuple}\\
+      & \mid \ecol{M\ ...} & \text{collection}\\
+      & \mid \eadt{C\ M\ ...} & \text{inductive data}\\
+      % & \mid \elet{\ t\ t} & \text{variable definition}\\
+      % & \mid \erec{\ t\ t} & \text{function definition}\\
+      & \mid \esome & \text{something matcher}\\
+      & \mid \ematchall{M\ M\ \etup{p\ M}} & \\ 
+      % & \mid \ematch{M\ M\ \ecol{\etup{p\ M}\ ...}} & \\ 
+      & \mid \ematcher{\ecol{\phi\ ...}} & \\
+  {\bf{pattern}} & &\\
+    p & ::= \bt{\_} & \text{wildcard}\\
+      & \mid \bt{\$}x & \text{pattern variable}\\
+      & \mid \bt{,}M & \text{value pattern}\\
+      & \mid \eadt{C_p\ p\ ...} & \text{inductive pattern}\\
+  {\bf{matcher clause}} & & \\
+    \phi & ::= \etup{pp\ M\ \ecol{\etup{dp\ M}}} & \\
+  {\bf{Atomic pattern pattern}} & & \\
+    pp & ::= \bt{\$} & \text{pattern hole}\\ 
+    & \mid \bt{,\$}x & \text{value-pattern pattern}\\
+    & \mid \eadt{C_{pp}\ pp\ ...} & \text{inductive-pattern pattern} \\
+  {\bf{Atomic data pattern}} & & \\
+    dp & ::= \bt{\$}x & \text{primitive pattern variable}\\
+    & \mid \eadt{C_{dp}\ dp\ ...} & \text{inductive-data pattern} \\
+  {\bf{Type}} & & \\
+    S,T & ::= X \mid I \mid \tstr \mid \tnum \mid \tbool \\
+      & \mid \tfun{T}{T} \\
+      & \mid \ttup{T\ T\ ...} \\
+      & \mid \tcol{T} \\
+      & \mid \tpat{T} \\
+      & \mid \tpppat{T\ T} \\
+      & \mid \tpdpat{T} \\
+      & \mid \tmatcher{T} \\
+      % & \mid \tmatcherclause{T} \\
+  {\bf{Environment}} & & \\
+    \Gamma & ::= \epsilon & \text{empty context}\\
+    & \mid \Gamma,x:T & \text{append $x$ to the context}\\
+    & \mid \Gamma \doubleplus \Gamma & \text{join two contexts}
+\end{align*}
+
+\section{Typing rule}
+\label{sec:egison-typingrules}
+{\bf{Typing rules of expressions}} \\
+    \infrule{}{\G,x:T,\D\V x:T \Rightarrow \G,x:T,\D}{\textsc{T-Var}} \andalso
+    \infrule{}{\G \V s:\tstr \Rightarrow \G}{\textsc{T-Str}} \andalso \\[2mm]
+    \infrule{}{\G \V n:\tnum \Rightarrow \G}{\textsc{T-Num}} \andalso 
+    \infrule{}{\G \V b:\tbool \Rightarrow \G}{\textsc{T-Bool}} \andalso \\[2mm]
+    \infrule{\G\V M_1:\tbool \Rightarrow \G \andalso \G\V M_2:T \Rightarrow \G \andalso \G\V M_3:T\Rightarrow \G }{\G \V \eif{\ M_1\ M_2\ M_3}:T \Rightarrow \G }{\textsc{T-If}} \\[2mm]
+    \infrule{\G \doubleplus \{x_1:S_1, \cdots x_n:S_n\} \V M:T \Rightarrow \G \doubleplus \{x_1:S_1, \cdots x_n:S_n\}}{\G\V\elam{\bt{\$}x_1\ \bt{\$}x_2\cdots \bt{\$}x_n}{\ M}:\tfun{\ttup{S_1,\cdots S_n}}{T} \Rightarrow \G }{\textsc{T-Abs}} \\[2mm]
+    \infrule{\G \V M:\tfun{\ttup{S_1\ \cdots S_n}}{T} \Rightarrow \G \andalso \G \V N_1:S_1 \Rightarrow \G \hspace{3mm}\cdots\hspace{3mm}\G \V N_n:S_n \Rightarrow \G }{\G\V\eapp{M\ N_1\ \cdots\ N_n}:T \Rightarrow \G }{\textsc{T-App}} \\[2mm]
+    \infrule{\G\V M_1:T_1 \Rightarrow \G \andalso \G\V M_2:T_2 \Rightarrow \G \ \cdots\ \G\V M_n:T_n \Rightarrow \G }{\G\V \etup{M_1\ M_2\ ...\ M_n}:\ttup{T_1\ T_2\ ...\ T_n} \Rightarrow \G }{\textsc{T-Tuple}} \\[2mm]
+    \infrule{\G\V M_1:T \Rightarrow \G \andalso \G\V M_2:T \Rightarrow \G \ ...\ \G\V M_n:T \Rightarrow \G }{\G\V \ecol{M_1\ M_2\ ...\ M_n}:\tcol{T} \Rightarrow \G }{\textsc{T-Collection}} \\[2mm]
+    \infrule{\G \V C:\tfun{\ttup{S_1 \cdots S_n} \Rightarrow \G }{T} \andalso \G \V N_1:S_1 \cdots \G \V N_n:S_n \Rightarrow \G }{\G\V\eadt{C\ N_1\ N_2\ ...\ N_n}:T \Rightarrow \G }{\textsc{T-InductiveData}} \\[2mm]    
+    \infrule{\G\V M_1:T_1 \Rightarrow \G \andalso \G\V M_2:\tmatcher{T_1} \Rightarrow \G  \\ \G\V p:\tpat{T_1} \Rightarrow \G' \andalso \G' \V M_3:T_3 \Rightarrow \G'}{\G\V\ematchall{M_1\ M_2\ \etup{p\ M_3}}:\tcol{T_3} \Rightarrow \G}{\textsc{T-MatchAll}} \\[2mm]
+    \infrule{}{\G\V \esome:\tmatcher{T} \Rightarrow \G}{\textsc{T-Something}} \\[2mm]
+    % \infrule{\G\V M:\tcol{\tmatcherclause{T}}}{\G\V \ematcher{M}:\tmatcher{T}}{\textsc{T-Matcher}} \\[2mm]
+    %\infrule{\G\V pp:\tpppat{T} \andalso \G\V M:\ttup{W(\G,pp)} \\
+    %\G\V dp_i:\tpdpat{T} \andalso \G \doubleplus V_{PP}(\G ,pp) \doubleplus V_{DP}(\G,dp_i)\V N_i:\tcol{\ttup{X(\G,pp)}}\qquad (1\le i\le n)}
+    % {\G\V\etup{pp\ M\ \ecol{\etup{dp_1\ N_1}\ \etup{dp_2\ N_2}\ \cdots\ \etup{dp_n\ N_n}}}:\tmatcherclause{T}}{\textsc{T-MatcherClause}} \\[6mm]
+
+    % \textrm{Matcher modified by Egi:} \\[6mm]
+    
+    \infrule{\G\V pp_i:\tpppat{T \ \etup{S_k}_k} \Rightarrow \G \\ \G\V M_i:\tmatcher{\etup{S_k}_k} \Rightarrow \G \\
+    \G\V dp_{ij}:\tpdpat{T} \Rightarrow \G' \\ \G' \V N_{ij}:\tcol{\etup{S_k}_k} \Rightarrow \G' \qquad  (\forall i,j)}
+    {\G\V \ematcher{\{\etup{pp_i\ M_i\ \{\etup{dp_{ij}\ N_{ij}}\}_j}_i\}}:\tmatcher{T} \Rightarrow \G}{\textsc{T-Matcher}} \\[4mm]
+
+    {\bf{Typing rules of patterns}} \\
+
+    \infrule{}{\G\V \bt{\_}:\tpat{T} \Rightarrow \G}{\textsc{T-Wildcard}}
+    \infrule{\G\V M:T \Rightarrow \G}{\G\V \bt{,}M:\tpat{T} \Rightarrow \G }{T-ValuePattern} \\[2mm]
+
+    \infrule{}{\G\V \bt{\$}x:\tpat{T} \Rightarrow \G \doubleplus \{ x:T\}}{\textsc{T-PatternVariable}} \\[2mm]
+    \infrule{\G \V C_p:\tfun{\ttup{\tpat{S_1} \cdots \tpat{S_n}}}{\tpat{T}} \Rightarrow \G \\ 
+    \G \V M_1:\tpat{S_1} \Rightarrow \G^1 \andalso \G^1 \V M_2:\tpat{S_2} \Rightarrow \G^2 \\
+    \G^2 \V M_3:\tpat{S_3} \Rightarrow \G^3 \\ \cdots \hspace{3mm} \G^{n-1} \V M_n:\tpat{S_n} \Rightarrow \G^n}{\G\V\eadt{C_p\ M_1\ M_2\ ...\ M_n}: \tpat{T} \Rightarrow \G^n}{\textsc{T-InductivePattern}} \\[6mm]
+    
+    {\bf{Typing rules of atomic pattern pattern}} \\
+    
+    \infrule{}{\G\V \bt{\$}:\tpppat{T \ \etup{T}} \Rightarrow \G}{\textsc{T-PatternHole}} \\[2mm]
+    \infrule{}{\G\V \bt{,\$}x:\tpppat{T \ \etup{}} \Rightarrow \G}{\textsc{T-ValuePatternPattern}} \\[2mm]
+    \infrule{\G\V C_{pp}:\tfun{\ttup{T_i}_i}{T} \Rightarrow \G \andalso \G\V pp_i:\tpppat{T_i \  S_i} \Rightarrow \G}{\G\V \eadt{C_{pp}\ pp_i}_i:\tpppat{T \ \Sigma_i S_i} \Rightarrow \G}{\textsc{T-InductivePatternPattern}} \\[6mm]
+
+    {\bf{Typing rules of atomic data pattern}} \\
+    
+    \infrule{}{\G \V \bt{\$}x:\tpdpat{T} \Rightarrow \G \doubleplus \{x:T\}}{\textsc{T-DataPatternVariable}} \\[6mm]
+    \infrule{\G \V C_{dp}:\tfun{\ttup{S_i}_i}{T} \Rightarrow \G \andalso \G \V dp_i:S_i \Rightarrow \G^i}{\G\V\eadt{C_{dp}\ dp_i}_i:T  \Rightarrow \sum_i \G^i}{\textsc{T-InductiveDataPattern}} \\[2mm]
+% Function $V$ returns bindings from variable names to their types.
+% \begin{align*}
+%   V(\G, \bt{\_}) = & \epsilon & \\
+%   V(\G, \bt{\$}x) = & \{(x:T)\} & \textrm{when } \G\V\bt{\$}x:\tpat{T} \\
+%   V(\G, \bt{,}M) = & \epsilon & \\
+%   V(\G, \eadt{C\ p_1\ p_2\ \cdots}) = & V(\G,p_1) \doubleplus V(\G \doubleplus V(\G,p_1),p_2) \doubleplus \cdots& \\
+% \end{align*}
+% 
+% \begin{align*}
+%   V_{PP}(\G, \bt{\$}) = & \epsilon &\\
+%   V_{PP}(\G, \bt{,\$}x) = & \{(x:\tpat{T})\} & \textrm{when } \G\V\bt{\$}x:\tpppat{T} \\
+%   V_{PP}(\G, \eadt{C\ pp_1\ pp_2\ \cdots}) = & V_{PP}(\G,pp_1) \doubleplus V_{PP}(\G,pp_2) \doubleplus \cdots& \\
+% \end{align*}
+% 
+% \begin{align*}
+%     V_{DP}(\G,\bt{\$}x) = & \{(x:T)\} & & \textrm{when } \G\V\bt{\$}x:\tpdpat{T} \\
+%     V_{DP}(\G, \eadt{C\ dp_1\ dp_2\ \cdots}) = & V_{DP}(\G,dp_1) \doubleplus V_{DP}(\G,dp_2) \doubleplus \cdots& \\
+% \end{align*}
+% 
+% Function $W$ and $X$ returns a series of types.
+% \begin{align*}
+%   W(\G, \bt{,\$}x) = & \epsilon & \\
+%   W(\G, \bt{\$}) = & \tmatcher{T} & \textrm{when } \G\V\bt{\$}:\tpppat{T}\\
+%   W(\G, \eadt{C\ pp_1\ pp_2\ \cdots}) = & W(\G,pp_1)\ W(\G ,pp_2)\ \cdots& \\
+% \end{align*}
+% 
+% \begin{align*}
+%   X(\G, \bt{,\$}x) = & \epsilon & \\
+%   X(\G, \bt{\$}) = & T & \textrm{when } \G\V\bt{\$}:\tpppat{T}\\
+%   X(\G, \eadt{C\ pp_1\ pp_2\ \cdots}) = & X(\G,pp_1)\ X(\G ,pp_2)\ \cdots& \\
+% \end{align*}
+% \figheader{FAQ}{}
+% \begin{itemize}
+%     \item Is there type polymorphism in Egison type system?\\
+%           Let polymorphism exists in the implementation of type checker. But it was omitted to simplify this handout.
+% \end{itemize}
+% % \figheader{Example}{}
+% \section{型付け導出の例}
+% \begin{center}
+%   $$
+%   \infer[\textsc{T-Str}]
+%   {\epsilon\V\bt{"Hello"}:\tstr}
+%   {}
+%   \hspace{10mm}
+%   \infer[\textsc{T-Str}]
+%   {\{x:\tint \}\V\bt{"World!"}:\tstr}
+%   {}
+%   $$
+%   \\[2mm]
+%   $$
+%   \infer[\textsc{T-If}]
+%   {\epsilon\V\eif{\ \bt{true}\ \bt{10}\ \bt{20}}:\tint}
+%   {
+%     \infer[\textsc{T-Bool}]
+%     {\epsilon\V\bt{true}:\tbool}
+%     {}
+%     \andalso
+%     \infer[\textsc{T-Num}]
+%     {\epsilon\V\bt{10}:\tint}
+%     {}
+%     \andalso
+%     \infer[\textsc{T-Num}]
+%     {\epsilon\V\bt{20}:\tint}
+%     {}
+%   }
+%   $$
+%   \\[2mm]
+%   $$
+%   \infer[\textsc{T-Abs}]
+%   {\{\bt{b.+}:\tfun{\ttup{\tint\ \tint}}{\tint}\}\V\elam{\bt{\$x}}{\ \bt{(b.+\ x\ 10)}}:\tfun{\tint}{\tint} }
+%   {
+%     \infer[\textsc{T-App}]
+%     {
+%     \{\bt{b.+}:\tfun{\ttup{\tint\ \tint}}{\tint}\}\doubleplus\{x:\tint\}\V\bt{(b.+\ x\ 10)}:\tint
+%     }
+%     {
+%       \infer[\textsc{T-Var}]
+%       {\cdots\V \bt{b.+}:\tfun{\ttup{\tint\ \tint}}{\tint}}
+%       {}
+%       \andalso
+%       \infer[\textsc{T-Var}]
+%       {\cdots\V x:\tint}
+%       {}
+%       \andalso
+%       \infer[\textsc{T-Num}]
+%       {\cdots\V 10:\tint}
+%       {}
+%     }
+%   }
+%   $$
+% \end{center}
+
+\end{document}
