@@ -2,41 +2,36 @@ Set Warnings "-notation-overridden,-parsing".
 From Coq Require Import Strings.String.
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Lists.List.
+From Coq Require Import Program.Basics.
 From Egison Require Import Maps.
-From Egison Require Import Smallstep.
 
 Module Egison.
 
   Definition varid := string.
 
-  Inductive pptn : Type :=
-  | ppdol : pptn
-  | ppvar : varid -> pptn
-  | ppctr : varid -> (list pptn) -> pptn.
-
-  Inductive dptn : Type :=
-  | dpvar :  varid -> dptn
-  | dpctr :  varid -> (list dptn) -> dptn.
-
-  Inductive ptn : Type :=
-  | pwld : ptn
-  | pvar : varid -> ptn
-  | pval : tm -> ptn
-  | pctr : varid -> list tm -> ptn.
-
-  Definition mcls := pptn * tm * (list (dptn * tm)) : Type.
-
-  Inductive tm : Type :=
+   Inductive tm : Type :=
   | tvar : varid -> tm
   | tint : nat -> tm
   | tlmb : varid -> tm -> tm
   | tapp : tm -> tm -> tm
   | ttpl : list tm -> tm
   | tcll : list tm -> tm
-  | tctr : list tm -> tm
+  | tctr : varid -> list tm -> tm
   | tmal : tm -> tm -> (list (ptn * tm)) -> tm
   | tsm : tm
-  | tmtc : (list mcls) -> tm.
+  | tmtc : (list (pptn * tm * (list (dptn * tm)))) -> tm
+  with ptn : Type :=
+  | pwld : ptn
+  | pvar : varid -> ptn
+  | pval : tm -> ptn
+  | pctr : varid -> list tm -> ptn
+ with pptn : Type :=
+  | ppdol : pptn
+  | ppvar : varid -> pptn
+  | ppctr : varid -> (list pptn) -> pptn
+  with dptn : Type :=
+  | dpvar :  varid -> dptn
+  | dpctr :  varid -> (list dptn) -> dptn.
 
   Open Scope string_scope.
   Definition x :=  "x".
@@ -44,6 +39,37 @@ Module Egison.
   Definition z := "z".
 
   Definition ppex1 := ppdol : pptn.
+
+  Definition environment := partial_map tm.
+
+  Definition mlcssize (f : tm -> nat) (mcl : pptn * tm * (list (dptn * tm))) : nat :=
+    let '(_, m1, l) := mcl in
+    max (f m1) (fold_left max (map (compose f snd) l) 0).
+
+  Fixpoint tmsize (m: tm) : nat :=
+    match m with
+    | tvar _ => 1
+    | tint _ => 1
+    | tlmb _ n => 1 + tmsize n
+    | tapp n1 n2 => 1 + max (tmsize n1) (tmsize n2)
+    | ttpl ms => 1 + fold_left max (map tmsize ms) 0
+    | tcll ms => 1 + fold_left max (map tmsize ms) 0
+    | tctr _ ms => 1 + fold_left max (map tmsize ms) 0
+    | tmal m1 m2 pts => 1 + max (max (tmsize m1) (tmsize m2)) (fold_left max (map (compose tmsize snd) pts) 0)
+    | tsm => 1
+    | tmtc mcl => 1 + fold_left max (map (mlcssize tmsize) mcl) 0
+    end.
+
+    Fixpoint val (m: tm) (s: nat) {struct s} : Prop :=
+      match m with
+      | tvar _ => True
+      | tint _ => True
+      | tlmb _ _ => True
+      | ttpl ts => (List.Forall (fun t => val t (tmsize t)) ts)
+      | _ => False
+      end.
+
+  Fixpoint eval_dptn (p: dptn v: tn) : environment := term.
 
 End Egison.
 
