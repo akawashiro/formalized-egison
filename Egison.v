@@ -7,8 +7,48 @@ From Egison Require Import Smallstep.
 
 Module Egison.
 
-(* ================================================================= *)
-(** ** Types *)
+  Definition varid := string.
+
+  Inductive pptn : Type :=
+  | ppdol : pptn
+  | ppvar : varid -> pptn
+  | ppctr : varid -> (list pptn) -> pptn.
+
+  Inductive dptn : Type :=
+  | dpvar :  varid -> dptn
+  | dpctr :  varid -> (list dptn) -> dptn.
+
+  Inductive ptn : Type :=
+  | pwld : ptn
+  | pvar : varid -> ptn
+  | pval : tm -> ptn
+  | pctr : varid -> list tm -> ptn.
+
+  Definition mcls := pptn * tm * (list (dptn * tm)) : Type.
+
+  Inductive tm : Type :=
+  | tvar : varid -> tm
+  | tint : nat -> tm
+  | tlmb : varid -> tm -> tm
+  | tapp : tm -> tm -> tm
+  | ttpl : list tm -> tm
+  | tcll : list tm -> tm
+  | tctr : list tm -> tm
+  | tmal : tm -> tm -> (list (ptn * tm)) -> tm
+  | tsm : tm
+  | tmtc : (list mcls) -> tm.
+
+  Open Scope string_scope.
+  Definition x :=  "x".
+  Definition y := "y".
+  Definition z := "z".
+
+  Definition ppex1 := ppdol : pptn.
+
+End Egison.
+
+  (* ================================================================= *)
+  (** ** Types *)
 
   Inductive ty : Type :=
   | String: ty
@@ -22,19 +62,7 @@ Module Egison.
   | PDPattern : ty -> ty
   | Matcher : ty -> ty.
 
-(* ================================================================= *)
-(** ** Terms *)
 
-  Inductive tm : Type :=
-  | var : string -> tm
-  | char : ascii -> tm
-  | str : string -> tm
-  | bl : bool -> tm
-  | int : nat -> tm
-  | iftm : tm -> tm -> tm -> tm.
-  | lambda : list string -> tm -> tm
-  | app : tm -> list tm -> tm
-  | collection : list tm -> tm
 
 (** Note that an abstraction [\x:T.t] (formally, [abs x T t]) is
     always annotated with the type [T] of its parameter, in contrast

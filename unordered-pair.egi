@@ -1,0 +1,17 @@
+(define $unordered-integer-pair
+  (matcher
+    {[<pair $ $> [integer integer]
+      {[[$x $y] {[x y] [y x]}]}]
+     [$ something
+      {[$tgt {tgt}]}]}))
+
+(match-all [1 2] unordered-integer-pair {[<pair $a $b> [a b]]})
+
+(define $unordered-pair
+  (matcher
+    {[<pair $ $> [something something]
+      {[[$x $y] {[x y] [y x]}]}]
+     [$ something
+      {[$tgt {tgt}]}]}))
+
+(match-all [1 2] unordered-pair {[<pair $a $b> [a b]]})
