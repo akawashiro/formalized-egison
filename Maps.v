@@ -48,7 +48,6 @@ Import ListNotations.
     maps.  In [Lists.v] we introduced a fresh type [id] for a similar
     purpose; here and for the rest of _Software Foundations_ we will
     use the [string] type from Coq's standard library. *)
-
 (** To compare strings, we define the function [eqb_string], which
     internally uses the function [string_dec] from Coq's string
     library. *)
@@ -319,13 +318,25 @@ Definition update {A : Type} (m : partial_map A)
            (x : string) (v : A) :=
   (x !-> Some v ; m).
 
+Definition is_some { A : Type } (o: option A) :=
+  match o with
+  | Some _ => true
+  | None => false
+  end.
+
+Definition concat_partialmap {A : Type} (m1 : partial_map A) (m2 : partial_map A) :=
+  fun x => if is_some (m1 x) then m1 x else m2 x.
+
 (** We introduce a similar notation for partial maps: *)
 Notation "x '|->' v ';' m" := (update m x v)
   (at level 100, v at next level, right associativity).
 
 (** We can also hide the last case when it is empty. *)
 Notation "x '|->' v" := (update empty x v)
-  (at level 100).
+                          (at level 100).
+
+Notation "m '@@' n" := (concat_partialmap m n)
+                         (at level 100).
 
 Example examplepmap :=
   ("Church" |-> true ; "Turing" |-> false).

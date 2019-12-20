@@ -16,7 +16,7 @@ Module Egison.
   | tapp : tm -> tm -> tm
   | ttpl : list tm -> tm
   | tcll : list tm -> tm
-  | tctr : varid -> list tm -> tm
+  | tpair : tm -> tm -> tm
   | tmal : tm -> tm -> (list (ptn * tm)) -> tm
   | tsm : tm
   | tmtc : (list (pptn * tm * (list (dptn * tm)))) -> tm
@@ -24,14 +24,14 @@ Module Egison.
   | pwld : ptn
   | pvar : varid -> ptn
   | pval : tm -> ptn
-  | pctr : varid -> list tm -> ptn
+  | ppair : ptn -> ptn -> ptn
  with pptn : Type :=
   | ppdol : pptn
   | ppvar : varid -> pptn
-  | ppctr : varid -> (list pptn) -> pptn
+  | pppair : pptn -> pptn -> pptn
   with dptn : Type :=
   | dpvar :  varid -> dptn
-  | dpctr :  varid -> (list dptn) -> dptn.
+  | dppair :  dptn -> dptn -> dptn.
 
   Open Scope string_scope.
   Definition x :=  "x".
@@ -40,7 +40,7 @@ Module Egison.
 
   Definition ppex1 := ppdol : pptn.
 
-  Definition environment := partial_map tm.
+  Definition env := partial_map tm.
 
   Definition mlcssize (f : tm -> nat) (mcl : pptn * tm * (list (dptn * tm))) : nat :=
     let '(_, m1, l) := mcl in
@@ -54,7 +54,7 @@ Module Egison.
     | tapp n1 n2 => 1 + max (tmsize n1) (tmsize n2)
     | ttpl ms => 1 + fold_left max (map tmsize ms) 0
     | tcll ms => 1 + fold_left max (map tmsize ms) 0
-    | tctr _ ms => 1 + fold_left max (map tmsize ms) 0
+    | tpair m1 m2 => 1 + max (tmsize m1) (tmsize m2)
     | tmal m1 m2 pts => 1 + max (max (tmsize m1) (tmsize m2)) (fold_left max (map (compose tmsize snd) pts) 0)
     | tsm => 1
     | tmtc mcl => 1 + fold_left max (map (mlcssize tmsize) mcl) 0
@@ -73,16 +73,33 @@ Module Egison.
   | vlmb : forall i m, value (tlmb i m)
   | vtpl : forall ms, Forall value ms -> value (ttpl ms)
   | vcll : forall ms, Forall value ms -> value (tcll ms)
-  | vctr : forall c ms, Forall value ms -> value (tctr c ms)
+  | vpair : forall m1 m2, value m1 /\ value m2 -> value (tpair m1 m2)
   | vmal : forall m1 m2 pts, value m1 -> value m2 -> Forall (fun t => value (snd t)) pts -> value (tmal m1 m2 pts)
   | vmtc : forall mcls, Forall value (concat (map mclstms mcls)) -> value (tmtc mcls).
+
+  Import ListNotations.
+
+  Inductive eval : env -> tm -> tm -> Prop :=
+  | evar : forall i e, eval e (tvar i) (tvar i)
+
+  with evaldp : dptn -> tm -> env -> Prop :=
+  | edpvar : forall z v, value v -> evaldp (dpvar z) v (z |-> v)
+  | edppair : forall p1 p2 v1 v2 g1 g2,
+      value v1 -> value v2 -> evaldp p1 v1 g1 -> evaldp p2 v2 g2 ->
+      evaldp (dppair p1 p2) (tpair v1 v2) (g1 @@ g2)
+
+  with evalpp : pptn -> env -> ptn -> (list ptn) -> env -> Prop :=
+  | eppdol : forall g p, evalpp ppdol g p [p] empty
+  | eppvar : forall i g m v, eval g m v -> evalpp (ppvar i) g (pval m) [] (y |-> v)
+  | epppair : forall pp1 pp2 p1 p2 g pv1 pv2 g1 g2,
+                evalpp pp1 g p1 pv1 g1 -> evalpp pp2 g p2 pv2 g2 ->
+                evalpp (pppair pp2 pp2) g (ppair p1 p2) (pv1 ++ pv2) (g1 @@ g2).
 
   Definition mlcsvalue (f : tm -> nat -> Prop) (mcl : pptn * tm * (list (dptn * tm))) (s: nat) :=
     match s with
       | (S ss) => (let '(_, m1, l) := mcl in (f m1 ss) /\ (List.Forall (fun m => f (snd m) ss)) l)
       | _ => False
     end.
-
 
   Fixpoint value_inside (m: tm) (s: nat) {struct s} : Prop :=
     match m, s with
