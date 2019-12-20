@@ -60,25 +60,38 @@ Module Egison.
     | tmtc mcl => 1 + fold_left max (map (mlcssize tmsize) mcl) 0
     end.
 
-    Fixpoint val (m: tm) (s: nat) {struct s} : Prop :=
-      match m with
-      | tvar _ => True
-      | tint _ => True
-      | tlmb _ _ => True
-      | ttpl ts => (List.Forall (fun t => val t (tmsize t)) ts)
+  Definition mlcsvalue (f : tm -> nat -> Prop) (mcl : pptn * tm * (list (dptn * tm))) (s: nat) :=
+    match s with
+      | (S ss) => (let '(_, m1, l) := mcl in (f m1 ss) /\ (List.Forall (fun m => f (snd m) ss)) l)
       | _ => False
-      end.
+    end.
 
-  Fixpoint eval_dptn (p: dptn v: tn) : environment := term.
+  Fixpoint value_inside (m: tm) (s: nat) {struct s} : Prop :=
+    match m, s with
+    | tvar _, _ => True
+    | tint _, _ => True
+    | tlmb _ _, _ => True
+    | ttpl ts, (S ss) => (List.Forall (fun t => value_inside t ss) ts)
+    | tcll ts, (S ss) => (List.Forall (fun t => value_inside t ss) ts)
+    | tctr _ ts, (S ss) => (List.Forall (fun t => value_inside t ss) ts)
+    | tmal m1 m2 pts, (S ss) => value_inside m1 ss /\ value_inside m2 ss /\ List.Forall (fun t => value_inside (snd t) ss) pts
+    | tsm, _ => True
+    | tmtc mcl, (S ss) => Forall (fun m => mlcsvalue value_inside m ss) mcl
+    | _, _ => False
+    end.
+
+  Definition value m := value_inside m (tmsize m).
+
+  Fixpoint eval_dptn (p: dptn) (v: tm) : option environment :=
 
 End Egison.
 
-  (* ================================================================= *)
-  (** ** Types *)
+(* ================================================================= *)
+(** ** Types *)
 
-  Inductive ty : Type :=
-  | String: ty
-  | Integer : ty
+Inductive ty : Type :=
+| String: ty
+| Integer : ty
   | Bool  : ty
   | Arrow : ty -> ty -> ty
   | Tuple : list ty -> ty
