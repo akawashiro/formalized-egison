@@ -60,11 +60,29 @@ Module Egison.
     | tmtc mcl => 1 + fold_left max (map (mlcssize tmsize) mcl) 0
     end.
 
+  Definition mclsvalue (f : tm -> Prop) (mcl : pptn * tm * (list (dptn * tm))) :=
+    let '(_, m1, l) := mcl in (f m1) /\ (List.Forall (fun m => f (snd m))) l.
+
+  Definition mclstms (mcl : pptn * tm * (list (dptn * tm))) : list tm :=
+    let '(_, m1, l) := mcl in
+    m1 :: map (fun m => snd m) l.
+
+  Inductive value : tm -> Prop :=
+  | vvar : forall i, value (tvar i)
+  | vint : forall i, value (tint i)
+  | vlmb : forall i m, value (tlmb i m)
+  | vtpl : forall ms, Forall value ms -> value (ttpl ms)
+  | vcll : forall ms, Forall value ms -> value (tcll ms)
+  | vctr : forall c ms, Forall value ms -> value (tctr c ms)
+  | vmal : forall m1 m2 pts, value m1 -> value m2 -> Forall (fun t => value (snd t)) pts -> value (tmal m1 m2 pts)
+  | vmtc : forall mcls, Forall value (concat (map mclstms mcls)) -> value (tmtc mcls).
+
   Definition mlcsvalue (f : tm -> nat -> Prop) (mcl : pptn * tm * (list (dptn * tm))) (s: nat) :=
     match s with
       | (S ss) => (let '(_, m1, l) := mcl in (f m1 ss) /\ (List.Forall (fun m => f (snd m) ss)) l)
       | _ => False
     end.
+
 
   Fixpoint value_inside (m: tm) (s: nat) {struct s} : Prop :=
     match m, s with
