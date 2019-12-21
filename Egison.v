@@ -154,35 +154,14 @@ Module Egison.
                              evalms3 svv (gv ++ dv)
 
   with evalma : env -> ma -> list (list ma) -> env -> Prop :=
-  | emasome : forall x g v d, evalma g (pvar x, tsm, d, v) [[]] (x |-> v).
-  | emappfail : forall p g pp m sv pv d v avv g1 pprp ppre,
-      not (evalpp pp g p pprp ppre) -> evalma g (p,(tmtc pv),d,v) avv g1 ->
-      evalma g (p,tmtc ((pp,m,sv)::pv),d,v) avv g1.
-
-
-  Definition mlcsvalue (f : tm -> nat -> Prop) (mcl : pptn * tm * (list (dptn * tm))) (s: nat) :=
-    match s with
-      | (S ss) => (let '(_, m1, l) := mcl in (f m1 ss) /\ (List.Forall (fun m => f (snd m) ss)) l)
-      | _ => False
-    end.
-
-  Fixpoint value_inside (m: tm) (s: nat) {struct s} : Prop :=
-    match m, s with
-    | tvar _, _ => True
-    | tint _, _ => True
-    | tlmb _ _, _ => True
-    | ttpl ts, (S ss) => (List.Forall (fun t => value_inside t ss) ts)
-    | tcll ts, (S ss) => (List.Forall (fun t => value_inside t ss) ts)
-    | tctr _ ts, (S ss) => (List.Forall (fun t => value_inside t ss) ts)
-    | tmal m1 m2 pts, (S ss) => value_inside m1 ss /\ value_inside m2 ss /\ List.Forall (fun t => value_inside (snd t) ss) pts
-    | tsm, _ => True
-    | tmtc mcl, (S ss) => Forall (fun m => mlcsvalue value_inside m ss) mcl
-    | _, _ => False
-    end.
-
-  Definition value m := value_inside m (tmsize m).
-
-  Fixpoint eval_dptn (p: dptn) (v: tm) : option environment :=
+  | emasome : forall x g v d, evalma g (pvar x, tsm, d, v) [[]] (x |-> v)
+  | emappfail : forall p g pp m sv pv d v avv g1,
+      evalpp pp g p None -> evalma g (p,(tmtc pv),d,v) avv g1 ->
+      evalma g (p,tmtc ((pp,m,sv)::pv),d,v) avv g1
+  | emadpfail : forall p g pp m dp n sv pv d v pv1 d1 avv g1,
+      evalpp pp g p (Some (pv1, d1)) -> evaldp dp v None ->
+      evalma g (p, tmtc ((pp,m,sv)::pv),d,v) avv g1 ->
+      evalma g (p, tmtc ((pp,m,(dp,n)::sv)::pv),d,v) avv g1.
 
 End Egison.
 
