@@ -83,6 +83,22 @@ Module Egison.
   Definition ms : Type := ((list (ptn * tm * tm)) * env * env).
   Definition ma : Type := (ptn * tm * tm).
 
+  Fixpoint zip4 {A B C D: Type} (l1:list A)  (l2: list B) (l3: list C) (l4: list D) : (list (A*B*C*D)) :=
+    match (l1, l2, l3, l4) with
+    | ([], _, _, _) => []
+    | (_, [], _, _) => []
+    | (_, _, [], _) => []
+    | (_, _, _, []) => []
+    | (h1::r1, h2::r2, h3::r3, h4::r4) => (h1,h2,h3,h4) :: zip4 r1 r2 r3 r4
+    end.
+
+  Fixpoint filtersome {A: Type} (l: list (option A)) : list A :=
+    match l with
+    | [] => []
+    | (Some v)::r => v::filtersome r
+    | None::r => filtersome r
+    end.
+
   Inductive eval : env -> tm -> tm -> Prop :=
   | evar : forall i e, eval e (tvar i) (tvar i)
 
@@ -99,12 +115,22 @@ Module Egison.
                 evalpp pp1 g p1 pv1 g1 -> evalpp pp2 g p2 pv2 g2 ->
                 evalpp (pppair pp2 pp2) g (ppair p1 p2) (pv1 ++ pv2) (g1 @@ g2)
 
-  with evalms1 : (list ms) -> option env -> option (list ms) -> option (list ms) -> Prop :=
-  | ems1nil : evalms1 [] None None None
-  | ems1anil : forall sv g d, evalms1 (([],g,d)::sv) (Some d) None (Some sv)
-  | ems1 : forall p m v av g d sv, exists avv d1,
-        (evalma (g @@ d) (p,m,v) avv d1) ->
-        (evalms1 (((p,m,v)::av, g, d)::sv) None (Some (map (fun ai => (ai ++ av, g, d @@ d1)) avv)) (Some sv))
+  with evalms1 : ((list ms) * option env * option (list ms) * option (list ms)) -> Prop :=
+  | ems1nil : evalms1 ([], None, None, None)
+  | ems1anil : forall sv g d, evalms1 ((([],g,d)::sv), (Some d), None, (Some sv))
+  | ems1 : forall p m v av g d sv avv d1,
+        evalma (g @@ d) (p,m,v) avv d1 ->
+        evalms1 ((((p,m,v)::av, g, d)::sv), None, (Some (map (fun ai => (ai ++ av, g, d @@ d1)) avv)), (Some sv))
+
+  with evalms2 : (list (list ms)) -> (list env) -> (list (list ms)) -> Prop :=
+  | ems2 : forall svv gvv svv1 svv2,
+      Forall evalms1 (zip4 svv gvv svv1 svv2) ->
+      evalms2 svv (filtersome gvv) ((filtersome svv1) ++ (filtersome svv2))
+
+  with evalms3 : (list (list ms)) -> (list env) -> Prop :=
+  | ems3nil : evalms3 [] []
+  | ems3 : forall svv gv svv1 dv, evalms2 svv gv svv1 -> evalms3 svv dv ->
+                             evalms3 svv (gv ++ dv)
 
   with evalma : env -> ma -> list (list ma) -> env -> Prop :=
   | emasome : forall x g v, evalma g (pvar x, tsm, v) [[]] (x |-> v).
