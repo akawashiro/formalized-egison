@@ -162,6 +162,10 @@ Module Egison.
       evalpp pp g p (Some (pv1, d1)) -> evaldp dp v None ->
       evalma g (p, tmtc ((pp,m,sv)::pv),d,v) avv g1 ->
       evalma g (p, tmtc ((pp,m,(dp,n)::sv)::pv),d,v) avv g1.
+  | ema : forall p Gamma pp M dp N sigma_v Delta v pv' Delta' Delta'' vvv' mv',
+      evalpp pp Gamma p Some (pv', Delta') ->
+      evaldp dp v (Some Delta'') ->
+
 
 End Egison.
 
