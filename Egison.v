@@ -99,21 +99,42 @@ Module Egison.
     | None::r => filtersome r
     end.
 
+  Definition is_tpair (t: tm) : Prop :=
+    match t with
+    | (tpair _ _) => True
+    | _ => False
+    end.
+
+  Definition is_pval (p: ptn) : Prop :=
+    match p with
+    | (pval _) => True
+    | _ => False
+    end.
+
+  Definition is_ppair (p: ptn) : Prop :=
+    match p with
+    | (ppair _ _) => True
+    | _ => False
+    end.
+
   Inductive eval : env -> tm -> tm -> Prop :=
   | evar : forall i e, eval e (tvar i) (tvar i)
 
-  with evaldp : dptn -> tm -> env -> Prop :=
-  | edpvar : forall z v, value v -> evaldp (dpvar z) v (z |-> v)
+  with evaldp : dptn -> tm -> option env -> Prop :=
+  | edpvar : forall z v, value v -> evaldp (dpvar z) v (Some (z |-> v))
   | edppair : forall p1 p2 v1 v2 g1 g2,
-      value v1 -> value v2 -> evaldp p1 v1 g1 -> evaldp p2 v2 g2 ->
-      evaldp (dppair p1 p2) (tpair v1 v2) (g1 @@ g2)
+      value v1 -> value v2 -> evaldp p1 v1 (Some g1) -> evaldp p2 v2 (Some g2) ->
+      evaldp (dppair p1 p2) (tpair v1 v2) (Some (g1 @@ g2))
+  | edpfail : forall t p1 p2, not (is_tpair t) -> evaldp (dppair p1 p2) t None
 
-  with evalpp : pptn -> env -> ptn -> (list ptn) -> env -> Prop :=
-  | eppdol : forall g p, evalpp ppdol g p [p] empty
-  | eppvar : forall i g m v, eval g m v -> evalpp (ppvar i) g (pval m) [] (y |-> v)
+  with evalpp : pptn -> env -> ptn -> option ((list ptn) * env) -> Prop :=
+  | eppdol : forall g p, evalpp ppdol g p (Some ([p], empty))
+  | eppvar : forall i g m v, eval g m v -> evalpp (ppvar i) g (pval m) (Some ([], (y |-> v)))
   | epppair : forall pp1 pp2 p1 p2 g pv1 pv2 g1 g2,
-                evalpp pp1 g p1 pv1 g1 -> evalpp pp2 g p2 pv2 g2 ->
-                evalpp (pppair pp2 pp2) g (ppair p1 p2) (pv1 ++ pv2) (g1 @@ g2)
+                evalpp pp1 g p1 (Some (pv1,g1)) -> evalpp pp2 g p2 (Some (pv2,g2)) ->
+                evalpp (pppair pp2 pp2) g (ppair p1 p2) (Some ((pv1 ++ pv2), (g1 @@ g2)))
+  | eppvarfail : forall y g p, not (is_pval p) -> evalpp (ppvar y) g p None
+  | epppairfail : forall pp1 pp2 p g, not (is_ppair p) -> evalpp (pppair pp1 pp2) g p None
 
   with evalms1 : ((list ms) * option env * option (list ms) * option (list ms)) -> Prop :=
   | ems1nil : evalms1 ([], None, None, None)
@@ -133,7 +154,7 @@ Module Egison.
                              evalms3 svv (gv ++ dv)
 
   with evalma : env -> ma -> list (list ma) -> env -> Prop :=
-  | emasome : forall x g v d, evalma g (pvar x, tsm, d, v) [[]] (x |-> v)
+  | emasome : forall x g v d, evalma g (pvar x, tsm, d, v) [[]] (x |-> v).
   | emappfail : forall p g pp m sv pv d v avv g1 pprp ppre,
       not (evalpp pp g p pprp ppre) -> evalma g (p,(tmtc pv),d,v) avv g1 ->
       evalma g (p,tmtc ((pp,m,sv)::pv),d,v) avv g1.
