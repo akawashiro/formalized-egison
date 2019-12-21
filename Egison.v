@@ -133,9 +133,11 @@ Module Egison.
                              evalms3 svv (gv ++ dv)
 
   with evalma : env -> ma -> list (list ma) -> env -> Prop :=
-  | emasome : forall x g v d, evalma g (pvar x, tsm, d, v) [[]] (x |-> v).
-  | emappfail : forall p g pp m sv pv d v avv g1,
-      not evalpp pp g p -> evalma p generalize 
+  | emasome : forall x g v d, evalma g (pvar x, tsm, d, v) [[]] (x |-> v)
+  | emappfail : forall p g pp m sv pv d v avv g1 pprp ppre,
+      not (evalpp pp g p pprp ppre) -> evalma g (p,(tmtc pv),d,v) avv g1 ->
+      evalma g (p,tmtc ((pp,m,sv)::pv),d,v) avv g1.
+
 
   Definition mlcsvalue (f : tm -> nat -> Prop) (mcl : pptn * tm * (list (dptn * tm))) (s: nat) :=
     match s with
