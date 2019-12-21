@@ -37,6 +37,7 @@ Module Egison.
   Definition x :=  "x".
   Definition y := "y".
   Definition z := "z".
+  Close Scope string_scope.
 
   Definition ppex1 := ppdol : pptn.
 
@@ -79,6 +80,9 @@ Module Egison.
 
   Import ListNotations.
 
+  Definition ms : Type := ((list (ptn * tm * tm)) * env * env).
+  Definition ma : Type := (ptn * tm * tm).
+
   Inductive eval : env -> tm -> tm -> Prop :=
   | evar : forall i e, eval e (tvar i) (tvar i)
 
@@ -93,7 +97,17 @@ Module Egison.
   | eppvar : forall i g m v, eval g m v -> evalpp (ppvar i) g (pval m) [] (y |-> v)
   | epppair : forall pp1 pp2 p1 p2 g pv1 pv2 g1 g2,
                 evalpp pp1 g p1 pv1 g1 -> evalpp pp2 g p2 pv2 g2 ->
-                evalpp (pppair pp2 pp2) g (ppair p1 p2) (pv1 ++ pv2) (g1 @@ g2).
+                evalpp (pppair pp2 pp2) g (ppair p1 p2) (pv1 ++ pv2) (g1 @@ g2)
+
+  with evalms1 : (list ms) -> option env -> option (list ms) -> option (list ms) -> Prop :=
+  | ems1nil : evalms1 [] None None None
+  | ems1anil : forall sv g d, evalms1 (([],g,d)::sv) (Some d) None (Some sv)
+  | ems1 : forall p m v av g d sv, exists avv d1,
+        (evalma (g @@ d) (p,m,v) avv d1) ->
+        (evalms1 (((p,m,v)::av, g, d)::sv) None (Some (map (fun ai => (ai ++ av, g, d @@ d1)) avv)) (Some sv))
+
+  with evalma : env -> ma -> list (list ma) -> env -> Prop :=
+  | emasome : forall x g v, evalma g (pvar x, tsm, v) [[]] (x |-> v).
 
   Definition mlcsvalue (f : tm -> nat -> Prop) (mcl : pptn * tm * (list (dptn * tm))) (s: nat) :=
     match s with
