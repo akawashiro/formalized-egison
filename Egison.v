@@ -80,8 +80,8 @@ Module Egison.
 
   Import ListNotations.
 
-  Definition ms : Type := ((list (ptn * tm * tm)) * env * env).
-  Definition ma : Type := (ptn * tm * tm).
+  Definition ms : Type := ((list (ptn * tm * env * tm)) * env * env).
+  Definition ma : Type := (ptn * tm * env * tm).
 
   Fixpoint zip4 {A B C D: Type} (l1:list A)  (l2: list B) (l3: list C) (l4: list D) : (list (A*B*C*D)) :=
     match (l1, l2, l3, l4) with
@@ -118,9 +118,9 @@ Module Egison.
   with evalms1 : ((list ms) * option env * option (list ms) * option (list ms)) -> Prop :=
   | ems1nil : evalms1 ([], None, None, None)
   | ems1anil : forall sv g d, evalms1 ((([],g,d)::sv), (Some d), None, (Some sv))
-  | ems1 : forall p m v av g d sv avv d1,
-        evalma (g @@ d) (p,m,v) avv d1 ->
-        evalms1 ((((p,m,v)::av, g, d)::sv), None, (Some (map (fun ai => (ai ++ av, g, d @@ d1)) avv)), (Some sv))
+  | ems1 : forall p m mg v av g d sv avv d1,
+        evalma (g @@ d) (p,m,mg,v) avv d1 ->
+        evalms1 ((((p,m,mg,v)::av, g, d)::sv), None, (Some (map (fun ai => (ai ++ av, g, d @@ d1)) avv)), (Some sv))
 
   with evalms2 : (list (list ms)) -> (list env) -> (list (list ms)) -> Prop :=
   | ems2 : forall svv gvv svv1 svv2,
@@ -133,7 +133,9 @@ Module Egison.
                              evalms3 svv (gv ++ dv)
 
   with evalma : env -> ma -> list (list ma) -> env -> Prop :=
-  | emasome : forall x g v, evalma g (pvar x, tsm, v) [[]] (x |-> v).
+  | emasome : forall x g v d, evalma g (pvar x, tsm, d, v) [[]] (x |-> v).
+  | emappfail : forall p g pp m sv pv d v avv g1,
+      not evalpp pp g p -> evalma p generalize 
 
   Definition mlcsvalue (f : tm -> nat -> Prop) (mcl : pptn * tm * (list (dptn * tm))) (s: nat) :=
     match s with
