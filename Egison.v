@@ -17,7 +17,7 @@ Module Egison.
   | ttpl : list tm -> tm
   | tcll : list tm -> tm
   | tpair : tm -> tm -> tm
-  | tmal : tm -> tm -> (list (ptn * tm)) -> tm
+  | tmal : tm -> tm -> (ptn * tm) -> tm
   | tsm : tm
   | tmtc : (list (pptn * tm * (list (dptn * tm)))) -> tm
   | ttplmtc : list tm -> tm
@@ -76,7 +76,7 @@ Module Egison.
   | vtpl : forall ms, Forall value ms -> value (ttpl ms)
   | vcll : forall ms, Forall value ms -> value (tcll ms)
   | vpair : forall m1 m2, value m1 /\ value m2 -> value (tpair m1 m2)
-  | vmal : forall m1 m2 pts, value m1 -> value m2 -> Forall (fun t => value (snd t)) pts -> value (tmal m1 m2 pts)
+  | vmal : forall m1 m2 pt, value m1 -> value m2 -> value (snd pt) -> value (tmal m1 m2 pt)
   | vmtc : forall mcls, Forall value (concat (map mclstms mcls)) -> value (tmtc mcls)
   | vtplmtc : forall ms, Forall value ms -> value (ttplmtc ms).
 
@@ -97,6 +97,14 @@ Module Egison.
     | ([], _) => []
     | (_, []) => []
     | (h1::r1, h2::r2) => (h1,h2) :: zip r1 r2
+    end.
+
+  Fixpoint zip3 {A B C: Type} (l1:list A)  (l2: list B) (l3: list C) : (list (A*B*C)) :=
+    match (l1, l2, l3) with
+    | ([], _, _) => []
+    | (_, [], _) => []
+    | (_, _, []) => []
+    | (h1::r1, h2::r2, h3::r3) => (h1,h2,h3) :: zip3 r1 r2 r3
     end.
 
   Fixpoint zip4 {A B C D: Type} (l1:list A)  (l2: list B) (l3: list C) (l4: list D) : (list (A*B*C*D)) :=
@@ -126,20 +134,23 @@ Module Egison.
     | _ => False
     end.
 
-  Inductive eval : env -> (tm * tm)-> Prop :=
-  | evar : forall i e, eval e ((tvar i), (tvar i))
-  | eint : forall i e, eval e ((tint i), (tint i))
-  | etpl : forall e ts vs, Forall (eval e) (zip ts vs) -> eval e ((ttpl ts), (ttpl vs))
-  | ecll : forall e ts vs, Forall (eval e) (zip ts vs) -> eval e ((tcll ts), (tcll vs))
-  | epair : forall e t1 t2 v1 v2, eval e (t1, v1) -> eval e (t2, v2) -> eval e ((tpair t1 t2), (tpair v1 v2))
-  | esm : forall Gamma, eval Gamma (tsm, tsm)
+  Inductive eval : (env * tm * tm)-> Prop :=
+  | evar : forall i e, eval (e, (tvar i), (tvar i))
+  | eint : forall i e, eval (e, (tint i), (tint i))
+  | etpl : forall e ts vs, Forall eval (map (fun tpl => let '(t,v) := tpl in (e,t,v)) (zip ts vs)) -> eval (e, (ttpl ts), (ttpl vs))
+  | ecll : forall e ts vs, Forall eval (map (fun tpl => let '(t,v) := tpl in (e,t,v)) (zip ts vs)) -> eval (e, (tcll ts), (tcll vs))
+  | epair : forall e t1 t2 v1 v2, eval (e, t1, v1) -> eval (e, t2, v2) -> eval (e, (tpair t1 t2), (tpair v1 v2))
+  | esm : forall Gamma, eval (Gamma, tsm, tsm)
   (* | emtc : forall Gamma (ts: (list (pptn * tm * (list (dptn * tm))))), eval Gamma ((tmtc ts), (tmtc vs)) *)
-  | etplmtc : forall Gamma ts vs, Forall (eval Gamma) (zip ts vs) -> eval Gamma ((ttplmtc ts), (ttplmtc vs))
+  | etplmtc : forall Gamma ts vs, Forall eval (map (fun tpl => let '(t,v) := tpl in (Gamma,t,v)) (zip ts vs)) -> eval (Gamma, (ttplmtc ts), (ttplmtc vs))
+  | etmal : forall Gamma M N p L v_v v m_m m_e Delta_v, eval (Gamma, M,v) -> evalmtc Gamma N [(m_m, m_e)] -> evalms3 [[([(p,m_m,m_e,v)], Gamma, empty)]] Delta_v ->
+                                                  Forall eval (map (fun t => let '(d,v) := t in (Gamma @@ d, L, v)) (zip Delta_v v_v)) ->
+                                                  eval (Gamma, (tmal M N (p, L)), tcll v_v)
 
   with evalmtc : env -> tm -> list (tm * env) -> Prop :=
   | emtcsm : forall Gamma, evalmtc Gamma tsm [(tsm, Gamma)]
   | emtcmtc : forall Gamma l, evalmtc Gamma (tmtc l) [((tmtc l), Gamma)]
-  | emtctpl : forall Gamma ms ms1, eval Gamma ((ttplmtc ms), (ttplmtc ms1)) -> evalmtc Gamma (ttplmtc ms1) (map (fun m => (m,Gamma)) ms1)
+  | emtctpl : forall Gamma ms ms1, eval (Gamma, (ttplmtc ms), (ttplmtc ms1)) -> evalmtc Gamma (ttplmtc ms1) (map (fun m => (m,Gamma)) ms1)
 
   with evaldp : dptn -> tm -> option env -> Prop :=
   | edpvar : forall z v, value v -> evaldp (dpvar z) v (Some (z |-> v))
@@ -150,7 +161,7 @@ Module Egison.
 
   with evalpp : pptn -> env -> ptn -> option ((list ptn) * env) -> Prop :=
   | eppdol : forall g p, evalpp ppdol g p (Some ([p], empty))
-  | eppvar : forall i g m v, eval g (m, v) -> evalpp (ppvar i) g (pval m) (Some ([], (y |-> v)))
+  | eppvar : forall i g m v, eval (g, m, v) -> evalpp (ppvar i) g (pval m) (Some ([], (y |-> v)))
   | epppair : forall pp1 pp2 p1 p2 g pv1 pv2 g1 g2,
                 evalpp pp1 g p1 (Some (pv1,g1)) -> evalpp pp2 g p2 (Some (pv2,g2)) ->
                 evalpp (pppair pp2 pp2) g (ppair p1 p2) (Some ((pv1 ++ pv2), (g1 @@ g2)))
@@ -182,9 +193,17 @@ Module Egison.
   | emadpfail : forall p g pp m dp n sv pv d v pv1 d1 avv g1,
       evalpp pp g p (Some (pv1, d1)) -> evaldp dp v None ->
       evalma g (p, tmtc ((pp,m,sv)::pv),d,v) avv g1 ->
-      evalma g (p, tmtc ((pp,m,(dp,n)::sv)::pv),d,v) avv g1.
-  | ema : forall p Gamma pp M dp N sigma_v Delta v pv' Delta' Delta'' vvv' mv',
-      evalpp pp Gamma p Some (pv', Delta') ->
-      evaldp dp v (Some Delta'') ->
+      evalma g (p, tmtc ((pp,m,(dp,n)::sv)::pv),d,v) avv g1
+  | ema : forall p Gamma pp M dp N sigma_v Delta v phi1_v p1_v Delta1 Delta2 v1_vv m1_v,
+      evalpp pp Gamma p (Some (p1_v, Delta1)) ->
+      evaldp dp v (Some Delta2) ->
+      eval (Delta @@ Delta1 @@ Delta2, N, tcll v1_vv) ->
+      evalmtc Gamma M m1_v ->
+      evalma Gamma (p, tmtc ((pp,M,(dp,N)::sigma_v)::phi1_v), Delta, v)
+             ((map (fun tpl => match tpl with
+                              | (ttpl v1_v) => map (fun t => let '(v1, (m1, Gamma1), p1) := t in (p1,m1,Gamma1,v1)) (zip3 v1_v m1_v p1_v)
+                              | _ => []
+                              end
+                   ) v1_vv)) empty.
 
 End Egison.
