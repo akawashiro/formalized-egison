@@ -20,6 +20,7 @@ Module Egison.
   | tmal : tm -> tm -> (list (ptn * tm)) -> tm
   | tsm : tm
   | tmtc : (list (pptn * tm * (list (dptn * tm)))) -> tm
+  | ttplmtc : list tm -> tm
   with ptn : Type :=
   | pwld : ptn
   | pvar : varid -> ptn
@@ -43,23 +44,23 @@ Module Egison.
 
   Definition env := partial_map tm.
 
-  Definition mlcssize (f : tm -> nat) (mcl : pptn * tm * (list (dptn * tm))) : nat :=
-    let '(_, m1, l) := mcl in
-    max (f m1) (fold_left max (map (compose f snd) l) 0).
+  (* Definition mlcssize (f : tm -> nat) (mcl : pptn * tm * (list (dptn * tm))) : nat := *)
+  (*   let '(_, m1, l) := mcl in *)
+  (*   max (f m1) (fold_left max (map (compose f snd) l) 0). *)
 
-  Fixpoint tmsize (m: tm) : nat :=
-    match m with
-    | tvar _ => 1
-    | tint _ => 1
-    (* | tlmb _ n => 1 + tmsize n *)
-    (* | tapp n1 n2 => 1 + max (tmsize n1) (tmsize n2) *)
-    | ttpl ms => 1 + fold_left max (map tmsize ms) 0
-    | tcll ms => 1 + fold_left max (map tmsize ms) 0
-    | tpair m1 m2 => 1 + max (tmsize m1) (tmsize m2)
-    | tmal m1 m2 pts => 1 + max (max (tmsize m1) (tmsize m2)) (fold_left max (map (compose tmsize snd) pts) 0)
-    | tsm => 1
-    | tmtc mcl => 1 + fold_left max (map (mlcssize tmsize) mcl) 0
-    end.
+  (* Fixpoint tmsize (m: tm) : nat := *)
+  (*   match m with *)
+  (*   | tvar _ => 1 *)
+  (*   | tint _ => 1 *)
+  (*   (* | tlmb _ n => 1 + tmsize n *) *)
+  (*   (* | tapp n1 n2 => 1 + max (tmsize n1) (tmsize n2) *) *)
+  (*   | ttpl ms => 1 + fold_left max (map tmsize ms) 0 *)
+  (*   | tcll ms => 1 + fold_left max (map tmsize ms) 0 *)
+  (*   | tpair m1 m2 => 1 + max (tmsize m1) (tmsize m2) *)
+  (*   | tmal m1 m2 pts => 1 + max (max (tmsize m1) (tmsize m2)) (fold_left max (map (compose tmsize snd) pts) 0) *)
+  (*   | tsm => 1 *)
+  (*   | tmtc mcl => 1 + fold_left max (map (mlcssize tmsize) mcl) 0 *)
+  (*   end. *)
 
   Definition mclsvalue (f : tm -> Prop) (mcl : pptn * tm * (list (dptn * tm))) :=
     let '(_, m1, l) := mcl in (f m1) /\ (List.Forall (fun m => f (snd m))) l.
@@ -76,7 +77,8 @@ Module Egison.
   | vcll : forall ms, Forall value ms -> value (tcll ms)
   | vpair : forall m1 m2, value m1 /\ value m2 -> value (tpair m1 m2)
   | vmal : forall m1 m2 pts, value m1 -> value m2 -> Forall (fun t => value (snd t)) pts -> value (tmal m1 m2 pts)
-  | vmtc : forall mcls, Forall value (concat (map mclstms mcls)) -> value (tmtc mcls).
+  | vmtc : forall mcls, Forall value (concat (map mclstms mcls)) -> value (tmtc mcls)
+  | vtplmtc : forall ms, Forall value ms -> value (ttplmtc ms).
 
   Import ListNotations.
 
@@ -130,6 +132,14 @@ Module Egison.
   | etpl : forall e ts vs, Forall (eval e) (zip ts vs) -> eval e ((ttpl ts), (ttpl vs))
   | ecll : forall e ts vs, Forall (eval e) (zip ts vs) -> eval e ((tcll ts), (tcll vs))
   | epair : forall e t1 t2 v1 v2, eval e (t1, v1) -> eval e (t2, v2) -> eval e ((tpair t1 t2), (tpair v1 v2))
+  | esm : forall Gamma, eval Gamma (tsm, tsm)
+  (* | emtc : forall Gamma (ts: (list (pptn * tm * (list (dptn * tm))))), eval Gamma ((tmtc ts), (tmtc vs)) *)
+  | etplmtc : forall Gamma ts vs, Forall (eval Gamma) (zip ts vs) -> eval Gamma ((ttplmtc ts), (ttplmtc vs))
+
+  with evalmtc : env -> tm -> list (tm * env) -> Prop :=
+  | emtcsm : forall Gamma, evalmtc Gamma tsm [(tsm, Gamma)]
+  | emtcmtc : forall Gamma l, evalmtc Gamma (tmtc l) [((tmtc l), Gamma)]
+  | emtctpl : forall Gamma ms ms1, eval Gamma ((ttplmtc ms), (ttplmtc ms1)) -> evalmtc Gamma (ttplmtc ms1) (map (fun m => (m,Gamma)) ms1)
 
   with evaldp : dptn -> tm -> option env -> Prop :=
   | edpvar : forall z v, value v -> evaldp (dpvar z) v (Some (z |-> v))
