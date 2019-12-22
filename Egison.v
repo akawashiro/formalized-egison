@@ -86,6 +86,14 @@ Module Egison.
     | None::r => filtersome r
     end.
 
+  Inductive same_length_list {A B: Type} : (list A) -> (list B) -> Prop :=
+  | sll_nil : same_length_list [] []
+  | sll_cons : forall h1 h2 l1 l2, same_length_list l1 l2 -> same_length_list (h1::l1) (h2::l2).
+
+  Inductive same_length_list3 {A B C: Type} : (list A) -> (list B) -> (list C) -> Prop :=
+  | sll_nil3 : same_length_list3 [] [] []
+  | sll_cons3 : forall h1 h2 h3 l1 l2 l3, same_length_list3 l1 l2 l3 -> same_length_list3 (h1::l1) (h2::l2) (h3::l3).
+
   Fixpoint zip {A B: Type} (l1:list A)  (l2: list B) : (list (A*B)) :=
     match (l1, l2) with
     | ([], _) => []
@@ -132,12 +140,13 @@ Module Egison.
   | evar : forall i e, eval (e, (tvar i), (tvar i))
   | eint : forall i e, eval (e, (tint i), (tint i))
   | etpl : forall Gamma t1 t2 v1 v2, eval (Gamma, t1, v1) -> eval (Gamma, t2, v2) -> eval (Gamma, ttpl t1 t2, ttpl v1 v2)
-  | ecll : forall e ts vs, Forall eval (map (fun tpl => let '(t,v) := tpl in (e,t,v)) (zip ts vs)) -> eval (e, (tcll ts), (tcll vs))
+  | ecll : forall e ts vs, same_length_list ts vs ->
+                      Forall eval (map (fun tpl => let '(t,v) := tpl in (e,t,v)) (zip ts vs)) -> eval (e, (tcll ts), (tcll vs))
   | epair : forall e t1 t2 v1 v2, eval (e, t1, v1) -> eval (e, t2, v2) -> eval (e, (tpair t1 t2), (tpair v1 v2))
   | esm : forall Gamma, eval (Gamma, tsm, tsm)
   (* | emtc : forall Gamma (ts: (list (pptn * tm * (list (dptn * tm))))), eval Gamma ((tmtc ts), (tmtc vs)) *)
   | etplmtc : forall Gamma t1 t2 v1 v2, eval (Gamma, t1, v1) -> eval (Gamma, t2, v2) -> eval (Gamma, ttplmtc t1 t2, ttplmtc v1 v2)
-  | etmal : forall Gamma M N p L v_v v m_m m_e Delta_v, eval (Gamma, M,v) -> evalmtc Gamma N [(m_m, m_e)] -> evalms3 [[([(p,m_m,m_e,v)], Gamma, empty)]] Delta_v ->
+  | etmal : forall Gamma M N p L v_v v m_m m_e Delta_v, same_length_list Delta_v v_v -> eval (Gamma, M,v) -> evalmtc Gamma N [(m_m, m_e)] -> evalms3 [[([(p,m_m,m_e,v)], Gamma, empty)]] Delta_v ->
                                                   Forall eval (map (fun t => let '(d,v) := t in (Gamma @@ d, L, v)) (zip Delta_v v_v)) ->
                                                   eval (Gamma, (tmal M N (p, L)), tcll v_v)
 
@@ -158,7 +167,7 @@ Module Egison.
   | eppvar : forall i g m v, eval (g, m, v) -> evalpp (ppvar i) g (pval m) (Some ([], (i |-> v)))
   | epppair : forall pp1 pp2 p1 p2 g pv1 pv2 g1 g2,
                 evalpp pp1 g p1 (Some (pv1,g1)) -> evalpp pp2 g p2 (Some (pv2,g2)) ->
-                evalpp (pppair pp2 pp2) g (ppair p1 p2) (Some ((pv1 ++ pv2), (g1 @@ g2)))
+                evalpp (pppair pp1 pp2) g (ppair p1 p2) (Some ((pv1 ++ pv2), (g1 @@ g2)))
   | eppvarfail : forall y g p, not (is_pval p) -> evalpp (ppvar y) g p None
   | epppairfail : forall pp1 pp2 p g, not (is_ppair p) -> evalpp (pppair pp1 pp2) g p None
 
@@ -171,13 +180,14 @@ Module Egison.
 
   with evalms2 : (list (list ms)) -> (list env) -> (list (list ms)) -> Prop :=
   | ems2 : forall svv gvv svv1 gvv1 svv2,
+      same_length_list3 svv gvv svv1 ->
       Forall evalms1 (zip3 svv gvv svv1) ->
       (filtersome gvv) = gvv1 ->
       (filtersome svv1) = svv2 ->
       evalms2 svv gvv1 svv2
 
   with evalms3 : (list (list ms)) -> (list env) -> Prop :=
-  | ems3nil : evalms3 [] []
+  | ems3nil : evalms3 [[]] []
   | ems3 : forall svv gv svv1 dv gdv, evalms2 svv gv svv1 -> evalms3 svv1 dv -> gdv = gv ++ dv ->
                              evalms3 svv gdv
 
@@ -220,28 +230,133 @@ Module Egison.
             [(dpvar "tgt", tcll [tvar "tgt"])])]).
 
   Definition mall_ex: tm :=
-    (tmal (tcll [tint 1; tint 2]) unordered_pair (ppair (pvar "a") (pvar "b"),ttpl (tvar "a") (tvar "b"))).
+    (tmal (tpair (tint 1) (tint 2)) unordered_pair (ppair (pvar "a") (pvar "b"),ttpl (tvar "a") (tvar "b"))).
   Theorem unordered_pair_ex : eval (empty, mall_ex, tcll [ttpl (tint 1) (tint 2);ttpl (tint 2) (tint 1)]).
   Proof.
     unfold mall_ex.
-    apply etmal with (v := tcll [tint 1; tint 2]) (m_m := unordered_pair) (m_e := empty) (Delta_v := [("a" |-> tint 1;"b" |-> tint 2);("b" |-> tint 1;"a" |-> tint 2)]).
-    - apply ecll.
+    eapply etmal.
+    - apply sll_cons.
+      apply sll_cons.
+      apply sll_nil.
+    - apply epair.
       simpl.
-      apply Forall_cons.
-      +
-        apply eint.
-      +
-        apply Forall_cons.
-        *
-          apply eint.
-        *
+      + eapply eint.
+      + eapply eint.
+    - eapply emtcmtc.
+    - eapply ems3.
+      + eapply ems2.
+        * apply sll_cons3.
+          apply sll_nil3.
+        * apply Forall_cons.
+          eapply ems1.
+          eapply ema.
+          eapply epppair.
+          eapply eppdol.
+          eapply eppdol.
+          eapply edppair.
+          apply vint.
+          apply vint.
+          eapply edpvar.
+          apply vint.
+          eapply edpvar.
+          apply vint.
+          eapply ecll.
+          apply sll_cons.
+          apply sll_cons.
+          apply sll_nil.
+          apply Forall_cons.
+          eapply etpl.
+          eapply evar.
+          eapply evar.
+          apply Forall_cons.
+          eapply etpl.
+          eapply evar.
+          eapply evar.
           apply Forall_nil.
-    -
-      apply emtcmtc.
-    -
-      eapply ems3.
-      eapply ems2.
-       (* To be continued... *)
+          eapply emtctpl.
+          eapply etplmtc.
+          eapply esm.
+          eapply esm.
+          apply Forall_nil.
+        * simpl.
+          reflexivity.
+        * simpl.
+          reflexivity.
+      + eapply ems3.
+        eapply ems2.
+        apply sll_cons3.
+        apply sll_nil3.
+        * apply Forall_cons.
+          eapply ems1.
+          eapply emasome.
+          apply Forall_nil.
+        * simpl.
+          reflexivity.
+        * simpl.
+          reflexivity. 
+        * eapply ems3.
+          eapply ems2.
+          apply sll_cons3.
+          apply sll_nil3.
+          apply Forall_cons.
+          eapply ems1.
+          eapply emasome.
+          apply Forall_nil.
+          simpl.
+          reflexivity. 
+          simpl.
+          reflexivity.
+          eapply ems3.
+          eapply ems2.
+          apply sll_cons3.
+          apply sll_nil3.
+          apply Forall_cons.
+          eapply ems1anil.
+          apply Forall_nil.
+          simpl.
+          reflexivity.
+          simpl.
+          reflexivity.
+          eapply ems3.
+          eapply ems2.
+          apply sll_cons3.
+          apply sll_nil3.
+          apply Forall_cons.
+          eapply ems1.
+          eapply emasome.
+          apply Forall_nil.
+          auto.
+          auto.
+          eapply ems3.
+          eapply ems2.
+          apply sll_cons3.
+          apply sll_nil3.
+          apply Forall_cons.
+          apply ems1.
+          apply emasome.
+          apply Forall_nil.
+          simpl. reflexivity.
+          simpl. reflexivity.
+          eapply ems3. eapply ems2. apply sll_cons3. apply sll_nil3.
+          apply Forall_cons.
+          eapply ems1anil.
+          apply Forall_nil.
+          simpl. reflexivity.
+          simpl. reflexivity.
+          eapply ems3nil.
+          simpl. reflexivity.
+          simpl. reflexivity.
+          simpl. reflexivity.
+          simpl. reflexivity.
+          simpl. reflexivity.
+        *
+          simpl. reflexivity.
+      +
+          simpl. reflexivity.
+    - 
+      apply Forall_cons.
+      apply etpl.
+          eauto.
 
   Close Scope string_scope.
 
