@@ -14,13 +14,13 @@ Module Egison.
   | tint : nat -> tm
   (* | tlmb : varid -> tm -> tm *)
   (* | tapp : tm -> tm -> tm *)
-  | ttpl : list tm -> tm
+  | ttpl : tm -> tm -> tm
   | tcll : list tm -> tm
   | tpair : tm -> tm -> tm
   | tmal : tm -> tm -> (ptn * tm) -> tm
   | tsm : tm
   | tmtc : (list (pptn * tm * (list (dptn * tm)))) -> tm
-  | ttplmtc : list tm -> tm
+  | ttplmtc : tm -> tm -> tm
   with ptn : Type :=
   | pwld : ptn
   | pvar : varid -> ptn
@@ -67,12 +67,12 @@ Module Egison.
   | vvar : forall i, value (tvar i)
   | vint : forall i, value (tint i)
   (* | vlmb : forall i m, value (tlmb i m) *)
-  | vtpl : forall ms, Forall value ms -> value (ttpl ms)
+  | vtpl : forall m1 m2, value m1 -> value m2 -> value (ttpl m1 m2)
   | vcll : forall ms, Forall value ms -> value (tcll ms)
   | vpair : forall m1 m2, value m1 /\ value m2 -> value (tpair m1 m2)
   | vmal : forall m1 m2 pt, value m1 -> value m2 -> value (snd pt) -> value (tmal m1 m2 pt)
   | vmtc : forall mcls, Forall value (concat (map mclstms mcls)) -> value (tmtc mcls)
-  | vtplmtc : forall ms, Forall value ms -> value (ttplmtc ms).
+  | vtplmtc : forall m1 m2, value m1 -> value m2 -> value (ttplmtc m1 m2).
 
   Import ListNotations.
 
@@ -131,12 +131,12 @@ Module Egison.
   Inductive eval : (env * tm * tm)-> Prop :=
   | evar : forall i e, eval (e, (tvar i), (tvar i))
   | eint : forall i e, eval (e, (tint i), (tint i))
-  | etpl : forall e ts vs, Forall eval (map (fun tpl => let '(t,v) := tpl in (e,t,v)) (zip ts vs)) -> eval (e, (ttpl ts), (ttpl vs))
+  | etpl : forall Gamma t1 t2 v1 v2, eval (Gamma, t1, v1) -> eval (Gamma, t2, v2) -> eval (Gamma, ttpl t1 t2, ttpl v1 v2)
   | ecll : forall e ts vs, Forall eval (map (fun tpl => let '(t,v) := tpl in (e,t,v)) (zip ts vs)) -> eval (e, (tcll ts), (tcll vs))
   | epair : forall e t1 t2 v1 v2, eval (e, t1, v1) -> eval (e, t2, v2) -> eval (e, (tpair t1 t2), (tpair v1 v2))
   | esm : forall Gamma, eval (Gamma, tsm, tsm)
   (* | emtc : forall Gamma (ts: (list (pptn * tm * (list (dptn * tm))))), eval Gamma ((tmtc ts), (tmtc vs)) *)
-  | etplmtc : forall Gamma ts vs, Forall eval (map (fun tpl => let '(t,v) := tpl in (Gamma,t,v)) (zip ts vs)) -> eval (Gamma, (ttplmtc ts), (ttplmtc vs))
+  | etplmtc : forall Gamma t1 t2 v1 v2, eval (Gamma, t1, v1) -> eval (Gamma, t2, v2) -> eval (Gamma, ttplmtc t1 t2, ttplmtc v1 v2)
   | etmal : forall Gamma M N p L v_v v m_m m_e Delta_v, eval (Gamma, M,v) -> evalmtc Gamma N [(m_m, m_e)] -> evalms3 [[([(p,m_m,m_e,v)], Gamma, empty)]] Delta_v ->
                                                   Forall eval (map (fun t => let '(d,v) := t in (Gamma @@ d, L, v)) (zip Delta_v v_v)) ->
                                                   eval (Gamma, (tmal M N (p, L)), tcll v_v)
@@ -144,7 +144,7 @@ Module Egison.
   with evalmtc : env -> tm -> list (tm * env) -> Prop :=
   | emtcsm : forall Gamma, evalmtc Gamma tsm [(tsm, Gamma)]
   | emtcmtc : forall Gamma l, evalmtc Gamma (tmtc l) [((tmtc l), Gamma)]
-  | emtctpl : forall Gamma ms ms1, eval (Gamma, (ttplmtc ms), (ttplmtc ms1)) -> evalmtc Gamma (ttplmtc ms1) (map (fun m => (m,Gamma)) ms1)
+  | emtctpl : forall Gamma m1 m2 n1 n2, eval (Gamma, (ttplmtc m1 m2), (ttplmtc n1 n2)) -> evalmtc Gamma (ttplmtc m1 m2) [(n1, Gamma); (n2, Gamma)]
 
   with evaldp : dptn -> tm -> option env -> Prop :=
   | edpvar : forall z v, value v -> evaldp (dpvar z) v (Some (z |-> v))
@@ -162,22 +162,24 @@ Module Egison.
   | eppvarfail : forall y g p, not (is_pval p) -> evalpp (ppvar y) g p None
   | epppairfail : forall pp1 pp2 p g, not (is_ppair p) -> evalpp (pppair pp1 pp2) g p None
 
-  with evalms1 : ((list ms) * option env * option (list ms) * option (list ms)) -> Prop :=
-  | ems1nil : evalms1 ([], None, None, None)
-  | ems1anil : forall sv g d, evalms1 ((([],g,d)::sv), (Some d), None, (Some sv))
+  with evalms1 : ((list ms) * option env * option (list ms)) -> Prop :=
+  | ems1nil : evalms1 ([], None, None)
+  | ems1anil : forall sv g d, evalms1 ((([],g,d)::sv), (Some d), (Some sv))
   | ems1 : forall p m mg v av g d sv avv d1,
         evalma (g @@ d) (p,m,mg,v) avv d1 ->
-        evalms1 ((((p,m,mg,v)::av, g, d)::sv), None, (Some (map (fun ai => (ai ++ av, g, d @@ d1)) avv)), (Some sv))
+        evalms1 ((((p,m,mg,v)::av, g, d)::sv), None, (Some ((map (fun ai => (ai ++ av, g, d @@ d1)) avv) ++ sv)))
 
   with evalms2 : (list (list ms)) -> (list env) -> (list (list ms)) -> Prop :=
-  | ems2 : forall svv gvv svv1 svv2,
-      Forall evalms1 (zip4 svv gvv svv1 svv2) ->
-      evalms2 svv (filtersome gvv) ((filtersome svv1) ++ (filtersome svv2))
+  | ems2 : forall svv gvv svv1 gvv1 svv2,
+      Forall evalms1 (zip3 svv gvv svv1) ->
+      (filtersome gvv) = gvv1 ->
+      (filtersome svv1) = svv2 ->
+      evalms2 svv gvv1 svv2
 
   with evalms3 : (list (list ms)) -> (list env) -> Prop :=
   | ems3nil : evalms3 [] []
-  | ems3 : forall svv gv svv1 dv, evalms2 svv gv svv1 -> evalms3 svv dv ->
-                             evalms3 svv (gv ++ dv)
+  | ems3 : forall svv gv svv1 dv gdv, evalms2 svv gv svv1 -> evalms3 svv1 dv -> gdv = gv ++ dv ->
+                             evalms3 svv gdv
 
   with evalma : env -> ma -> list (list ma) -> env -> Prop :=
   | emasome : forall x g v d, evalma g (pvar x, tsm, d, v) [[]] (x |-> v)
@@ -195,8 +197,8 @@ Module Egison.
       evalmtc Gamma M m1_v ->
       evalma Gamma (p, tmtc ((pp,M,(dp,N)::sigma_v)::phi1_v), Delta, v)
              ((map (fun tpl => match tpl with
-                              | (ttpl v1_v) => map (fun t => let '(v1, (m1, Gamma1), p1) := t in (p1,m1,Gamma1,v1)) (zip3 v1_v m1_v p1_v)
-                              | _ => []
+                              | (ttpl v11 v12) => map (fun t => let '(v1, (m1, Gamma1), p1) := t in (p1,m1,Gamma1,v1)) (zip3 [v11;v12] m1_v p1_v)
+                              | v11 => map (fun t => let '(v1, (m1, Gamma1), p1) := t in (p1,m1,Gamma1,v1)) (zip3 [v11] m1_v p1_v)
                               end
                    ) v1_vv)) empty.
 
@@ -212,19 +214,34 @@ Module Egison.
 
   Open Scope string_scope.
   Definition unordered_pair: tm :=
-    (tmtc [(pppair ppdol ppdol, ttplmtc [tsm; tsm],
-            [(dppair (dpvar "x") (dpvar "y"), (tcll [(ttpl [(tvar "x"); (tvar "y")]); ttpl [tvar "y"; tvar "x"]]))]);
+    (tmtc [(pppair ppdol ppdol, ttplmtc tsm tsm,
+            [(dppair (dpvar "x") (dpvar "y"), (tcll [(ttpl (tvar "x") (tvar "y")); ttpl (tvar "y") (tvar "x")]))]);
            (ppdol, tsm,
-            [(dpvar "tgt", tcll [ttpl [tvar "tgt"]])])]).
+            [(dpvar "tgt", tcll [tvar "tgt"])])]).
 
   Definition mall_ex: tm :=
-    (tmal (tcll [tint 1; tint 2]) unordered_pair (ppair (pvar "a") (pvar "b"),ttpl [tvar "a"; tvar "b"])).
-  Theorem unordered_pair_ex : eval (empty, mall_ex, tcll [ttpl [tint 1;tint 2];ttpl [tint 2;tint 1]]).
-  (* Proof. *)
-  (*   unfold mall_ex. *)
-  (*   apply etmal with (v := tcll [tint 1; tint 2]) (m_m := unordered_pair) (m_e := empty) (Delta_v := [("a" |-> tint 1;"b" |-> tint 2);("b" |-> tint 1;"a" |-> tint 2)]). *)
-  (*   - apply ecll. *)
-  (* To be continued... *)
+    (tmal (tcll [tint 1; tint 2]) unordered_pair (ppair (pvar "a") (pvar "b"),ttpl (tvar "a") (tvar "b"))).
+  Theorem unordered_pair_ex : eval (empty, mall_ex, tcll [ttpl (tint 1) (tint 2);ttpl (tint 2) (tint 1)]).
+  Proof.
+    unfold mall_ex.
+    apply etmal with (v := tcll [tint 1; tint 2]) (m_m := unordered_pair) (m_e := empty) (Delta_v := [("a" |-> tint 1;"b" |-> tint 2);("b" |-> tint 1;"a" |-> tint 2)]).
+    - apply ecll.
+      simpl.
+      apply Forall_cons.
+      +
+        apply eint.
+      +
+        apply Forall_cons.
+        *
+          apply eint.
+        *
+          apply Forall_nil.
+    -
+      apply emtcmtc.
+    -
+      eapply ems3.
+      eapply ems2.
+       (* To be continued... *)
 
   Close Scope string_scope.
 
