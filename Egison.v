@@ -137,7 +137,8 @@ Module Egison.
     end.
 
   Inductive eval : (env * tm * tm)-> Prop :=
-  | evar : forall i e, eval (e, (tvar i), (tvar i))
+  | evarin : forall i Gamma t, (Gamma i) = Some t -> eval (Gamma, (tvar i), t)
+  | evarout : forall i Gamma, (Gamma i) = None -> eval (Gamma, (tvar i), (tvar i))
   | eint : forall i e, eval (e, (tint i), (tint i))
   | etpl : forall Gamma t1 t2 v1 v2, eval (Gamma, t1, v1) -> eval (Gamma, t2, v2) -> eval (Gamma, ttpl t1 t2, ttpl v1 v2)
   | ecll : forall e ts vs, same_length_list ts vs ->
@@ -248,40 +249,54 @@ Module Egison.
         * apply sll_cons3.
           apply sll_nil3.
         * apply Forall_cons.
-          eapply ems1.
-          eapply ema.
-          eapply epppair.
-          eapply eppdol.
-          eapply eppdol.
-          eapply edppair.
-          apply vint.
-          apply vint.
-          eapply edpvar.
-          apply vint.
-          eapply edpvar.
-          apply vint.
-          eapply ecll.
-          apply sll_cons.
-          apply sll_cons.
-          apply sll_nil.
-          apply Forall_cons.
-          eapply etpl.
-          eapply evar.
-          eapply evar.
-          apply Forall_cons.
-          eapply etpl.
-          eapply evar.
-          eapply evar.
-          apply Forall_nil.
-          eapply emtctpl.
-          eapply etplmtc.
-          eapply esm.
-          eapply esm.
-          apply Forall_nil.
+          -- eapply ems1.
+             eapply ema.
+             --- eapply epppair.
+                 ---- eapply eppdol.
+                 ---- eapply eppdol.
+             --- eapply edppair.
+                 ---- apply vint.
+                 ---- apply vint.
+                 ---- eapply edpvar.
+                      apply vint.
+                 ---- eapply edpvar.
+                      apply vint.
+             --- eapply ecll.
+                 ---- apply sll_cons.
+                      apply sll_cons.
+                      apply sll_nil.
+                 ---- apply Forall_cons.
+                      apply etpl.
+                      apply evarin.
+                      unfold concat_partialmap.
+                      simpl.
+                      unfold update.
+                      apply t_update_eq.
+                      apply evarin.
+                      unfold concat_partialmap.
+                      simpl.
+                      apply t_update_eq.
+                      apply Forall_cons.
+                      apply etpl.
+                      apply evarin.
+                      unfold concat_partialmap.
+                      simpl.
+                      apply t_update_eq.
+                      apply evarin.
+                      unfold concat_partialmap.
+                      simpl.
+                      apply t_update_eq.
+                      apply Forall_nil.
+             --- eapply emtctpl.
+                 eapply etplmtc.
+                 eapply esm.
+                 eapply esm.
+          -- apply Forall_nil.
         * simpl.
           reflexivity.
         * simpl.
           reflexivity.
+          (* もう怪しい *)
       + eapply ems3.
         eapply ems2.
         apply sll_cons3.
@@ -290,65 +305,66 @@ Module Egison.
           eapply ems1.
           eapply emasome.
           apply Forall_nil.
+          (* すでに確実におかしい *)
         * simpl.
           reflexivity.
         * simpl.
           reflexivity. 
         * eapply ems3.
-          eapply ems2.
-          apply sll_cons3.
-          apply sll_nil3.
-          apply Forall_cons.
-          eapply ems1.
-          eapply emasome.
-          apply Forall_nil.
-          simpl.
-          reflexivity. 
-          simpl.
-          reflexivity.
-          eapply ems3.
-          eapply ems2.
-          apply sll_cons3.
-          apply sll_nil3.
-          apply Forall_cons.
-          eapply ems1anil.
-          apply Forall_nil.
-          simpl.
-          reflexivity.
-          simpl.
-          reflexivity.
-          eapply ems3.
-          eapply ems2.
-          apply sll_cons3.
-          apply sll_nil3.
-          apply Forall_cons.
-          eapply ems1.
-          eapply emasome.
-          apply Forall_nil.
-          auto.
-          auto.
-          eapply ems3.
-          eapply ems2.
-          apply sll_cons3.
-          apply sll_nil3.
-          apply Forall_cons.
-          apply ems1.
-          apply emasome.
-          apply Forall_nil.
-          simpl. reflexivity.
-          simpl. reflexivity.
-          eapply ems3. eapply ems2. apply sll_cons3. apply sll_nil3.
-          apply Forall_cons.
-          eapply ems1anil.
-          apply Forall_nil.
-          simpl. reflexivity.
-          simpl. reflexivity.
-          eapply ems3nil.
-          simpl. reflexivity.
-          simpl. reflexivity.
-          simpl. reflexivity.
-          simpl. reflexivity.
-          simpl. reflexivity.
+          -- eapply ems2.
+             --- apply sll_cons3.
+                 apply sll_nil3.
+             --- apply Forall_cons.
+                 eapply ems1.
+                 eapply emasome.
+                 apply Forall_nil.
+             --- simpl.
+                 reflexivity. 
+             --- simpl.
+                 reflexivity.
+          -- eapply ems3.
+             --- eapply ems2.
+                 apply sll_cons3.
+                 apply sll_nil3.
+                 apply Forall_cons.
+                 eapply ems1anil.
+                 apply Forall_nil.
+                 simpl.
+                 reflexivity.
+                 simpl.
+                 reflexivity.
+             --- eapply ems3.
+                 eapply ems2.
+                 apply sll_cons3.
+                 apply sll_nil3.
+                 apply Forall_cons.
+                 eapply ems1.
+                 eapply emasome.
+                 apply Forall_nil.
+                 auto.
+                 auto.
+                 eapply ems3.
+                 eapply ems2.
+                 apply sll_cons3.
+                 apply sll_nil3.
+                 apply Forall_cons.
+                 apply ems1.
+                 apply emasome.
+                 apply Forall_nil.
+                 simpl. reflexivity.
+                 simpl. reflexivity.
+                 eapply ems3. eapply ems2. apply sll_cons3. apply sll_nil3.
+                 apply Forall_cons.
+                 eapply ems1anil.
+                 apply Forall_nil.
+                 simpl. reflexivity.
+                 simpl. reflexivity.
+                 eapply ems3nil.
+                 simpl. reflexivity.
+                 simpl. reflexivity.
+                 simpl. reflexivity.
+             --- simpl. reflexivity.
+          -- simpl. reflexivity.
         *
           simpl. reflexivity.
       +
@@ -356,8 +372,25 @@ Module Egison.
     - 
       apply Forall_cons.
       apply etpl.
-          eauto.
-
-  Close Scope string_scope.
-
+      apply evarin.
+      unfold concat_partialmap.
+      simpl.
+      apply t_update_eq.
+       apply evarin.
+      unfold concat_partialmap.
+      simpl.
+      apply t_update_eq.
+ 
+       apply Forall_cons.
+      apply etpl.
+      apply evarin.
+      unfold concat_partialmap.
+      simpl.
+      apply t_update_eq.
+       apply evarin.
+      unfold concat_partialmap.
+      simpl.
+      apply t_update_eq.
+      apply Forall_nil.
+      Qed.
 End Egison.
