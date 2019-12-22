@@ -34,12 +34,6 @@ Module Egison.
   | dpvar :  varid -> dptn
   | dppair :  dptn -> dptn -> dptn.
 
-  Open Scope string_scope.
-  Definition x :=  "x".
-  Definition y := "y".
-  Definition z := "z".
-  Close Scope string_scope.
-
   Definition ppex1 := ppdol : pptn.
 
   Definition env := partial_map tm.
@@ -161,7 +155,7 @@ Module Egison.
 
   with evalpp : pptn -> env -> ptn -> option ((list ptn) * env) -> Prop :=
   | eppdol : forall g p, evalpp ppdol g p (Some ([p], empty))
-  | eppvar : forall i g m v, eval (g, m, v) -> evalpp (ppvar i) g (pval m) (Some ([], (y |-> v)))
+  | eppvar : forall i g m v, eval (g, m, v) -> evalpp (ppvar i) g (pval m) (Some ([], (i |-> v)))
   | epppair : forall pp1 pp2 p1 p2 g pv1 pv2 g1 g2,
                 evalpp pp1 g p1 (Some (pv1,g1)) -> evalpp pp2 g p2 (Some (pv2,g2)) ->
                 evalpp (pppair pp2 pp2) g (ppair p1 p2) (Some ((pv1 ++ pv2), (g1 @@ g2)))
@@ -205,5 +199,33 @@ Module Egison.
                               | _ => []
                               end
                    ) v1_vv)) empty.
+
+  (* Following Egison code is translated into Coq as follows. *)
+  (* (define $unordered-pair *)
+  (*   (matcher *)
+  (*     {[<pair $ $> [something something] *)
+  (*       {[[$x $y] {[x y] [y x]}]}] *)
+  (*      [$ something *)
+  (*       {[$tgt {tgt}]}]})) *)
+
+  (* (match-all [1 2] unordered-pair {[<pair $a $b> [a b]]}) ===> {[1,2] [2,1]} *)
+
+  Open Scope string_scope.
+  Definition unordered_pair: tm :=
+    (tmtc [(pppair ppdol ppdol, ttplmtc [tsm; tsm],
+            [(dppair (dpvar "x") (dpvar "y"), (tcll [(ttpl [(tvar "x"); (tvar "y")]); ttpl [tvar "y"; tvar "x"]]))]);
+           (ppdol, tsm,
+            [(dpvar "tgt", tcll [ttpl [tvar "tgt"]])])]).
+
+  Definition mall_ex: tm :=
+    (tmal (tcll [tint 1; tint 2]) unordered_pair (ppair (pvar "a") (pvar "b"),ttpl [tvar "a"; tvar "b"])).
+  Theorem unordered_pair_ex : eval (empty, mall_ex, tcll [ttpl [tint 1;tint 2];ttpl [tint 2;tint 1]]).
+  (* Proof. *)
+  (*   unfold mall_ex. *)
+  (*   apply etmal with (v := tcll [tint 1; tint 2]) (m_m := unordered_pair) (m_e := empty) (Delta_v := [("a" |-> tint 1;"b" |-> tint 2);("b" |-> tint 1;"a" |-> tint 2)]). *)
+  (*   - apply ecll. *)
+  (* To be continued... *)
+
+  Close Scope string_scope.
 
 End Egison.
