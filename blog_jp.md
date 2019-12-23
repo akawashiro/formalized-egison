@@ -16,7 +16,7 @@ Egisonの中核的な機能はユーザが拡張可能なパターンマッチ�
 ```
 しかし、その拡張性のためにこのパターンマッチの動作は大変複雑です。
 [Egi, Nishiwaki (2018)](https://arxiv.org/abs/1808.10603)はEgisonのパターンマッチの動作をbig-step styleの操作的意味論として次のように定義しています。
-Fig
+![Egisonの操作的意味論](https://raw.githubusercontent.com/akawashiro/formalized-egison/master/semantics.png)
 型健全性などのEgisonの性質を証明する際はこの操作的意味論を使うことになりますが、規則の種類、数が多いので証明を手で書くと間違えてしまいそうです。
 そこで今回の記事ではEgi, Nishiwaki (2018)の操作的意味論をCoqに書き直しました。
 

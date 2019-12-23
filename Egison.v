@@ -230,11 +230,11 @@ Module Egison.
            (ppdol, tsm,
             [(dpvar "tgt", tcll [tvar "tgt"])])]).
 
-  Definition mall_ex: tm :=
+  Definition match_all_example: tm :=
     (tmal (tpair (tint 1) (tint 2)) unordered_pair (ppair (pvar "a") (pvar "b"),ttpl (tvar "a") (tvar "b"))).
-  Theorem unordered_pair_ex : eval (empty, mall_ex, tcll [ttpl (tint 1) (tint 2);ttpl (tint 2) (tint 1)]).
+  Theorem unordered_pair_example : eval (empty, match_all_example, tcll [ttpl (tint 1) (tint 2);ttpl (tint 2) (tint 1)]).
   Proof.
-    unfold mall_ex.
+    unfold match_all_example.
     eapply etmal.
     - apply sll_cons.
       apply sll_cons.
