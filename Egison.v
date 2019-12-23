@@ -1,3 +1,5 @@
+(* Copyright (c) Akira Kawata All rights reserved. *)
+
 Set Warnings "-notation-overridden,-parsing".
 From Coq Require Import Strings.String.
 From Coq Require Import Strings.Ascii.
