@@ -236,157 +236,25 @@ Module Egison.
     (tmal (tpair (tint 1) (tint 2)) unordered_pair (ppair (pvar "a") (pvar "b"),ttpl (tvar "a") (tvar "b"))).
   Theorem unordered_pair_example : eval (empty, match_all_example, tcll [ttpl (tint 1) (tint 2);ttpl (tint 2) (tint 1)]).
   Proof.
-    unfold match_all_example.
-    eapply etmal.
-    - apply sll_cons.
-      apply sll_cons.
-      apply sll_nil.
-    - apply epair.
-      simpl.
-      + eapply eint.
-      + eapply eint.
-    - eapply emtcmtc.
-    - eapply ems3.
-      + eapply ems2.
-        * apply sll_cons3.
-          apply sll_nil3.
-        * apply Forall_cons.
-          -- eapply ems1.
+    econstructor.
+    - repeat econstructor.
+    - repeat econstructor.
+    - repeat econstructor.
+    - econstructor.
+      + econstructor.
+        * repeat econstructor.
+        * econstructor.
+          -- econstructor.
              eapply ema.
-             --- eapply epppair.
-                 ---- eapply eppdol.
-                 ---- eapply eppdol.
-             --- eapply edppair.
-                 ---- apply vint.
-                 ---- apply vint.
-                 ---- eapply edpvar.
-                      apply vint.
-                 ---- eapply edpvar.
-                      apply vint.
-             --- eapply ecll.
-                 ---- apply sll_cons.
-                      apply sll_cons.
-                      apply sll_nil.
-                 ---- apply Forall_cons.
-                      apply etpl.
-                      apply evarin.
-                      unfold concat_partialmap.
-                      simpl.
-                      unfold update.
-                      apply t_update_eq.
-                      apply evarin.
-                      unfold concat_partialmap.
-                      simpl.
-                      apply t_update_eq.
-                      apply Forall_cons.
-                      apply etpl.
-                      apply evarin.
-                      unfold concat_partialmap.
-                      simpl.
-                      apply t_update_eq.
-                      apply evarin.
-                      unfold concat_partialmap.
-                      simpl.
-                      apply t_update_eq.
-                      apply Forall_nil.
-             --- eapply emtctpl.
-                 eapply etplmtc.
-                 eapply esm.
-                 eapply esm.
-          -- apply Forall_nil.
-        * simpl.
-          reflexivity.
-        * simpl.
-          reflexivity.
-      + eapply ems3.
-        eapply ems2.
-        apply sll_cons3.
-        apply sll_nil3.
-        * apply Forall_cons.
-          eapply ems1.
-          eapply emasome.
-          apply Forall_nil.
-        * simpl.
-          reflexivity.
-        * simpl.
-          reflexivity. 
-        * eapply ems3.
-          -- eapply ems2.
-             --- apply sll_cons3.
-                 apply sll_nil3.
-             --- apply Forall_cons.
-                 eapply ems1.
-                 eapply emasome.
-                 apply Forall_nil.
-             --- simpl.
-                 reflexivity. 
-             --- simpl.
-                 reflexivity.
-          -- eapply ems3.
-             --- eapply ems2.
-                 ---- apply sll_cons3.
-                      apply sll_nil3.
-                 ---- apply Forall_cons.
-                      eapply ems1anil.
-                      apply Forall_nil.
-                 ---- simpl.
-                      reflexivity.
-                 ---- simpl.
-                 reflexivity.
-             --- eapply ems3.
-                 ---- eapply ems2.
-                      apply sll_cons3.
-                      apply sll_nil3.
-                      apply Forall_cons.
-                      eapply ems1.
-                      eapply emasome.
-                      apply Forall_nil.
-                      auto.
-                      auto.
-                 ---- eapply ems3.
-                      eapply ems2.
-                      apply sll_cons3.
-                      apply sll_nil3.
-                      apply Forall_cons.
-                      apply ems1.
-                      apply emasome.
-                      apply Forall_nil.
-                      simpl. reflexivity.
-                      simpl. reflexivity.
-                      eapply ems3. eapply ems2. apply sll_cons3. apply sll_nil3.
-                      apply Forall_cons.
-                      eapply ems1anil.
-                      apply Forall_nil.
-                      simpl. reflexivity.
-                      simpl. reflexivity.
-                      eapply ems3nil.
-                      simpl. reflexivity.
-                      simpl. reflexivity.
-                 ---- simpl. reflexivity.
-             --- simpl. reflexivity.
-          -- simpl. reflexivity.
-        * simpl. reflexivity.
-      + simpl. reflexivity.
-    - apply Forall_cons.
-      + apply etpl.
-        apply evarin.
-        unfold concat_partialmap.
-        simpl.
-        apply t_update_eq.
-        apply evarin.
-        unfold concat_partialmap.
-        simpl.
-        apply t_update_eq.
-      + apply Forall_cons.
-        apply etpl.
-        apply evarin.
-        unfold concat_partialmap.
-        simpl.
-        apply t_update_eq.
-        apply evarin.
-        unfold concat_partialmap.
-        simpl.
-        apply t_update_eq.
-        apply Forall_nil.
-  Qed.
+             --- repeat econstructor.
+             --- repeat econstructor.
+             --- repeat econstructor.
+             --- repeat econstructor.
+          -- repeat constructor.
+        * repeat constructor.
+        * repeat constructor.
+      + repeat econstructor.
+      + repeat econstructor.
+    - repeat econstructor.
+ Qed.
 End Egison.
