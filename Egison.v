@@ -19,7 +19,7 @@ Module Egison.
   | etpl : exp -> exp -> exp
   | ecll : list exp -> exp
   | epair : exp -> exp -> exp
-  | expmal : exp -> exp -> (ptn * exp) -> exp
+  | emal : exp -> exp -> (ptn * exp) -> exp
   | esm : exp
   | emtc : (list (pptn * exp * (list (dptn * exp)))) -> exp
   | etplmtc : exp -> exp -> exp
@@ -43,7 +43,7 @@ Module Egison.
    | tpair : ty -> ty -> ty
    | tmtc : ty -> ty
    | tptn : ty -> ty
-   | tpptn : ty -> ty
+   | tpptn : ty -> list ty -> ty
    | tdptn : ty -> ty.
 
   (* Definition ppex1 := ppdol : pptn. *)
@@ -64,7 +64,7 @@ Module Egison.
   (*   | etpl ms => 1 + fold_left max (map expsize ms) 0 *)
   (*   | ecll ms => 1 + fold_left max (map expsize ms) 0 *)
   (*   | epair m1 m2 => 1 + max (expsize m1) (expsize m2) *)
-  (*   | expmal m1 m2 pts => 1 + max (max (expsize m1) (expsize m2)) (fold_left max (map (compose expsize snd) pts) 0) *)
+  (*   | emal m1 m2 pts => 1 + max (max (expsize m1) (expsize m2)) (fold_left max (map (compose expsize snd) pts) 0) *)
   (*   | esm => 1 *)
   (*   | emtc mcl => 1 + fold_left max (map (mlcssize expsize) mcl) 0 *)
   (*   end. *)
@@ -82,7 +82,7 @@ Module Egison.
   | V_Tpl : forall m1 m2, value m1 -> value m2 -> value (etpl m1 m2)
   | V_Cll : forall ms, Forall value ms -> value (ecll ms)
   | V_Pair : forall m1 m2, value m1 /\ value m2 -> value (epair m1 m2)
-  | V_Mal : forall m1 m2 pt, value m1 -> value m2 -> value (snd pt) -> value (expmal m1 m2 pt)
+  | V_Mal : forall m1 m2 pt, value m1 -> value m2 -> value (snd pt) -> value (emal m1 m2 pt)
   | V_Mtc : forall mcls, Forall value (concat (map mclsexps mcls)) -> value (emtc mcls)
   | V_Tplmtc : forall m1 m2, value m1 -> value m2 -> value (etplmtc m1 m2).
   (* | V_Lmb : forall i m, value (tlmb i m) *)
@@ -149,16 +149,48 @@ Module Egison.
     | _ => False
     end.
 
-  Inductive typed : (tenv * exp * ty * tenv) -> Prop :=
-  | T_Var : forall Gamma s T, Gamma s = Some T -> typed (Gamma, (evar s), T, Gamma)
-  | T_Int : forall Gamma i, typed (Gamma, (eint i), tint, Gamma)
-  | T_Pair : forall Gamma e1 T1 e2 T2, typed (Gamma, e1, T1, Gamma) ->
-                                  typed (Gamma, e2, T2, Gamma) ->
-                                  typed (Gamma, (epair e1 e2), (tpair T1 T2), Gamma)
-  | T_Cll : forall Gamma es T, Forall typed (map (fun e => (Gamma,e,T,Gamma)) es) ->
-                          typed (Gamma, (ecll es), (tcll T), Gamma).
+  Inductive type : (tenv * exp * ty * tenv) -> Prop :=
+  | T_Var : forall Gamma s T, Gamma s = Some T -> type (Gamma, (evar s), T, Gamma)
+  | T_Int : forall Gamma i, type (Gamma, (eint i), tint, Gamma)
+  | T_Pair : forall Gamma e1 T1 e2 T2, type (Gamma, e1, T1, Gamma) ->
+                                  type (Gamma, e2, T2, Gamma) ->
+                                  type (Gamma, (epair e1 e2), (tpair T1 T2), Gamma)
+  | T_Cll : forall Gamma es T, Forall type (map (fun e => (Gamma,e,T,Gamma)) es) ->
+                          type (Gamma, (ecll es), (tcll T), Gamma)
+  | T_Sm : forall Gamma T, type (Gamma, esm, (tmtc T), Gamma)
+  | T_TplMtc : forall Gamma e1 T1 e2 T2, type (Gamma, e1, (tmtc T1), Gamma) ->
+                                    type (Gamma, e2, (tmtc T2), Gamma) ->
+                                    type (Gamma, (etplmtc e1 e2), (tmtc (ttpl T1 T2)), Gamma)
+  | T_Mal : forall Gamma e1 e2 e3 T1 T2 Gamma1 p,
+      type (Gamma, e1, T1, Gamma) ->
+      type (Gamma, e2, (tmtc T1), Gamma) ->
+      typeptn (Gamma, p, (tptn T1), Gamma1) ->
+      type (Gamma1, e3, T2, Gamma1) ->
+      type (Gamma, emal e1 e2 (p, e3), tcll T2, Gamma)
+  with typeptn : (tenv * ptn * ty * tenv) -> Prop :=
+  | TP_Wld : forall Gamma T, typeptn (Gamma, pwld, T, Gamma)
+  | TP_Var : forall Gamma s T, typeptn (Gamma, (pvar s), (tptn T), s |-> T ; Gamma)
+  | TP_Val : forall Gamma e T, type (Gamma, e, T, Gamma) -> typeptn (Gamma, pval e, tptn T, Gamma)
+  | TP_Pair : forall Gamma p1 T1 p2 T2 Gamma1 Gamma2,
+      typeptn (Gamma, p1, tptn T1, Gamma1) ->
+      typeptn (Gamma, p2, tptn T2, Gamma2) ->
+      typeptn (Gamma, ppair p1 p2, tptn (tpair T1 T2), Gamma2)
+  with typepptn : (tenv * pptn * ty * tenv) -> Prop :=
+  | TPP_Dol : forall Gamma T, typepptn (Gamma, ppdol, tpptn T [T], Gamma)
+  | TPP_Var : forall Gamma s T, typepptn (Gamma, ppvar s, tpptn T [], Gamma)
+  | TPP_Pair : forall Gamma pp1 T1 S1 pp2 T2 S2 S12,
+      typepptn (Gamma, pp1, tpptn T1 S1, Gamma) ->
+      typepptn (Gamma, pp2, tpptn T2 S2, Gamma) ->
+      S12 = S1 ++ S2 ->
+      typepptn (Gamma, pppair pp1 pp2, tpptn (tpair T1 T2) S12, Gamma)
+  with typedptn : (tenv * dptn * ty * tenv) -> Prop :=
+  | TDP_Var : forall Gamma s T, typedptn (Gamma, (dpvar s), (tdptn T), s |-> T ; Gamma)
+  | TDP_Pair : forall Gamma dp1 T1 Gamma1 dp2 T2 Gamma2,
+      typedptn (Gamma, dp1, tdptn T1, Gamma1) ->
+      typedptn (Gamma, dp2, tdptn T2, Gamma2) ->
+      typedptn (Gamma, dppair dp1 dp2, tdptn (tpair T1 T2), Gamma1 @@ Gamma2).
 
-  Theorem T_Int_example : typed (empty, (eint 10), tint, empty).
+  Theorem T_Int_example : type (empty, (eint 10), tint, empty).
   Proof.
     econstructor.
   Qed.
@@ -174,9 +206,9 @@ Module Egison.
   | E_Sm : forall Gamma, eval (Gamma, esm, esm)
   (* | emtc : forall Gamma (ts: (list (pptn * exp * (list (dptn * exp))))), eval Gamma ((emtc ts), (emtc vs)) *)
   | E_Tplmtc : forall Gamma t1 t2 v1 v2, eval (Gamma, t1, v1) -> eval (Gamma, t2, v2) -> eval (Gamma, etplmtc t1 t2, etplmtc v1 v2)
-  | E_Expmal : forall Gamma M N p L v_v v m_m m_e Delta_v, same_length_list Delta_v v_v -> eval (Gamma, M,v) -> evalmtc Gamma N [(m_m, m_e)] -> evalms3 [[([(p,m_m,m_e,v)], Gamma, empty)]] Delta_v ->
+  | E_Emal : forall Gamma M N p L v_v v m_m m_e Delta_v, same_length_list Delta_v v_v -> eval (Gamma, M,v) -> evalmtc Gamma N [(m_m, m_e)] -> evalms3 [[([(p,m_m,m_e,v)], Gamma, empty)]] Delta_v ->
                                                   Forall eval (map (fun t => let '(d,v) := t in (Gamma @@ d, L, v)) (zip Delta_v v_v)) ->
-                                                  eval (Gamma, (expmal M N (p, L)), ecll v_v)
+                                                  eval (Gamma, (emal M N (p, L)), ecll v_v)
 
   with evalmtc : env -> exp -> list (exp * env) -> Prop :=
   | Emtc_Sm : forall Gamma, evalmtc Gamma esm [(esm, Gamma)]
@@ -258,7 +290,7 @@ Module Egison.
             [(dpvar "tgt", ecll [evar "tgt"])])]).
 
   Definition match_all_example: exp :=
-    (expmal (epair (eint 1) (eint 2)) unordered_pair (ppair (pvar "a") (pvar "b"),etpl (evar "a") (evar "b"))).
+    (emal (epair (eint 1) (eint 2)) unordered_pair (ppair (pvar "a") (pvar "b"),etpl (evar "a") (evar "b"))).
   Theorem unordered_pair_example : eval (empty, match_all_example, ecll [etpl (eint 1) (eint 2);etpl (eint 2) (eint 1)]).
   Proof.
     econstructor.
