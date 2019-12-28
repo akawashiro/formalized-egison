@@ -168,9 +168,10 @@ Module Egison.
   with evalpp : pptn -> env -> ptn -> option ((list ptn) * env) -> Prop :=
   | eppdol : forall g p, evalpp ppdol g p (Some ([p], empty))
   | eppvar : forall i g m v, eval (g, m, v) -> evalpp (ppvar i) g (pval m) (Some ([], (i |-> v)))
-  | epppair : forall pp1 pp2 p1 p2 g pv1 pv2 g1 g2,
-                evalpp pp1 g p1 (Some (pv1,g1)) -> evalpp pp2 g p2 (Some (pv2,g2)) ->
-                evalpp (pppair pp1 pp2) g (ppair p1 p2) (Some ((pv1 ++ pv2), (g1 @@ g2)))
+  | epppair : forall pp1 pp2 p1 p2 g pv1 pv2 g1 g2 pv12,
+      evalpp pp1 g p1 (Some (pv1,g1)) -> evalpp pp2 g p2 (Some (pv2,g2)) ->
+      pv12 = pv1 ++ pv2 ->
+      evalpp (pppair pp1 pp2) g (ppair p1 p2) (Some (pv12, (g1 @@ g2)))
   | eppvarfail : forall y g p, not (is_pval p) -> evalpp (ppvar y) g p None
   | epppairfail : forall pp1 pp2 p g, not (is_ppair p) -> evalpp (pppair pp1 pp2) g p None
 
@@ -203,17 +204,22 @@ Module Egison.
       evalpp pp g p (Some (pv1, d1)) -> evaldp dp v None ->
       evalma g (p, tmtc ((pp,m,sv)::pv),d,v) avv g1 ->
       evalma g (p, tmtc ((pp,m,(dp,n)::sv)::pv),d,v) avv g1
-  | ema : forall p Gamma pp M dp N sigma_v Delta v phi1_v p1_v Delta1 Delta2 v1_vv m1_v,
-      evalpp pp Gamma p (Some (p1_v, Delta1)) ->
+  (* ema1 is the case of j = 1 in [Egi, Nishiwaki 2018] *)
+  | ema1 : forall p Gamma pp M dp N sigma_v Delta v phi1_v p1 Delta1 Delta2 v1_vv m1 Gamma1,
+      evalpp pp Gamma p (Some ([p1], Delta1)) ->
       evaldp dp v (Some Delta2) ->
       eval (Delta @@ Delta1 @@ Delta2, N, tcll v1_vv) ->
-      evalmtc Gamma M m1_v ->
+      evalmtc Gamma M [(m1, Gamma1)] ->
       evalma Gamma (p, tmtc ((pp,M,(dp,N)::sigma_v)::phi1_v), Delta, v)
-             ((map (fun tpl => match tpl with
-                              | (ttpl v11 v12) => map (fun t => let '(v1, (m1, Gamma1), p1) := t in (p1,m1,Gamma1,v1)) (zip3 [v11;v12] m1_v p1_v)
-                              | v11 => map (fun t => let '(v1, (m1, Gamma1), p1) := t in (p1,m1,Gamma1,v1)) (zip3 [v11] m1_v p1_v)
-                              end
-                   ) v1_vv)) empty.
+             (map (fun v1 => [(p1, m1, Gamma1, v1)]) v1_vv) empty
+  (* ema2 is the case of j = 2 in [Egi, Nishiwaki 2018] *)
+  | ema2 : forall p Gamma pp M dp N sigma_v Delta v phi1_v p1 p2 Delta1 Delta2 v1_vv m1 m2 Gamma1 Gamma2,
+      evalpp pp Gamma p (Some ([p1;p2], Delta1)) ->
+      evaldp dp v (Some Delta2) ->
+      eval (Delta @@ Delta1 @@ Delta2, N, tcll v1_vv) ->
+      evalmtc Gamma M [(m1,Gamma1);(m2,Gamma2)] ->
+      evalma Gamma (p, tmtc ((pp,M,(dp,N)::sigma_v)::phi1_v), Delta, v)
+             (map (fun tpl => let ttpl '(v1, v2) := tpl in [(p1, m1, Gamma1, v1);(p2, m2, Gamma2, v2)]) v1_vv) empty.
 
   (* Following Egison code is translated into Coq as follows. *)
   (* (define $unordered-pair *)
@@ -245,7 +251,7 @@ Module Egison.
         * repeat econstructor.
         * econstructor.
           -- econstructor.
-             eapply ema.
+             eapply ema2.
              --- repeat econstructor.
              --- repeat econstructor.
              --- repeat econstructor.
@@ -255,6 +261,9 @@ Module Egison.
         * repeat constructor.
       + repeat econstructor.
       + repeat econstructor.
-    - repeat econstructor.
+    - econstructor.
+      + econstructor.
+        * repeat econstructor.
+        repeat econstructor.
  Qed.
 End Egison.
