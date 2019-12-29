@@ -41,7 +41,7 @@ Module Egison.
    | ttpl : ty -> ty -> ty
    | tcll : ty -> ty
    | tpair : ty -> ty -> ty
-   | tmtc : ty -> ty
+   | tmtc : list ty -> ty
    | tptn : ty -> ty
    | tpptn : ty -> list ty -> ty
    | tdptn : ty -> ty.
@@ -155,25 +155,50 @@ Module Egison.
   | T_Pair : forall Gamma e1 T1 e2 T2, type (Gamma, e1, T1, Gamma) ->
                                   type (Gamma, e2, T2, Gamma) ->
                                   type (Gamma, (epair e1 e2), (tpair T1 T2), Gamma)
+  | T_Tpl : forall Gamma e1 T1 e2 T2, type (Gamma, e1, T1, Gamma) ->
+                                 type (Gamma, e2, T2, Gamma) ->
+                                 type (Gamma, (etpl e1 e2), (ttpl T1 T2), Gamma)
   | T_Cll : forall Gamma es T, Forall type (map (fun e => (Gamma,e,T,Gamma)) es) ->
                           type (Gamma, (ecll es), (tcll T), Gamma)
-  | T_Sm : forall Gamma T, type (Gamma, esm, (tmtc T), Gamma)
-  | T_TplMtc : forall Gamma e1 T1 e2 T2, type (Gamma, e1, (tmtc T1), Gamma) ->
-                                    type (Gamma, e2, (tmtc T2), Gamma) ->
-                                    type (Gamma, (etplmtc e1 e2), (tmtc (ttpl T1 T2)), Gamma)
+  | T_Sm : forall Gamma T, type (Gamma, esm, (tmtc [T]), Gamma)
+  | T_TplMtc : forall Gamma e1 T1 e2 T2 T12,
+      type (Gamma, e1, (tmtc T1), Gamma) ->
+      type (Gamma, e2, (tmtc T2), Gamma) ->
+      T12 = T1 ++ T2 ->
+      type (Gamma, (etplmtc e1 e2), (tmtc T12), Gamma)
+  | T_Mtc : forall Gamma mcls T, Forall typemcl (map (fun m => (Gamma, m, T)) mcls) ->
+                            type (Gamma, emtc mcls, tmtc [T], Gamma)
   | T_Mal : forall Gamma e1 e2 e3 T1 T2 Gamma1 p,
       type (Gamma, e1, T1, Gamma) ->
-      type (Gamma, e2, (tmtc T1), Gamma) ->
+      type (Gamma, e2, (tmtc [T1]), Gamma) ->
       typeptn (Gamma, p, (tptn T1), Gamma1) ->
       type (Gamma1, e3, T2, Gamma1) ->
       type (Gamma, emal e1 e2 (p, e3), tcll T2, Gamma)
+  with typemcl : (tenv * (pptn * exp * (list (dptn * exp))) * ty) -> Prop :=
+  | TM_1 : forall Gamma pp M dpN_v T S,
+      typepptn (Gamma, pp, tpptn T [S], Gamma) ->
+      type (Gamma, M, tmtc [S], Gamma) ->
+      Forall typedpN (map (fun dpN => (Gamma, dpN, T, [S])) dpN_v) ->
+      typemcl (Gamma, (pp, M, dpN_v), T)
+  | TM_2 : forall Gamma pp M dpN_v T S1 S2,
+      typepptn (Gamma, pp, tpptn T [S1;S2], Gamma) ->
+      type (Gamma, M, tmtc [S1;S2], Gamma) ->
+      Forall typedpN (map (fun dpN => (Gamma, dpN, T, [S1;S2])) dpN_v) ->
+      typemcl (Gamma, (pp, M, dpN_v), T)
+  with typedpN : (tenv * (dptn * exp) * ty * list ty) -> Prop :=
+  | TDN_1 : forall Gamma dp N T S Gamma1,
+      typedptn (Gamma, dp, tdptn T, Gamma1) -> type (Gamma1, N, tcll S, Gamma1) ->
+      typedpN (Gamma, (dp, N), T, [S])
+  | TDN_2 : forall Gamma dp N T S1 S2 Gamma1,
+      typedptn (Gamma, dp, tdptn T, Gamma1) -> type (Gamma1, N, tcll (ttpl S1 S2), Gamma1) ->
+      typedpN (Gamma, (dp, N), T, [S1;S2])
   with typeptn : (tenv * ptn * ty * tenv) -> Prop :=
   | TP_Wld : forall Gamma T, typeptn (Gamma, pwld, T, Gamma)
   | TP_Var : forall Gamma s T, typeptn (Gamma, (pvar s), (tptn T), s |-> T ; Gamma)
   | TP_Val : forall Gamma e T, type (Gamma, e, T, Gamma) -> typeptn (Gamma, pval e, tptn T, Gamma)
   | TP_Pair : forall Gamma p1 T1 p2 T2 Gamma1 Gamma2,
       typeptn (Gamma, p1, tptn T1, Gamma1) ->
-      typeptn (Gamma, p2, tptn T2, Gamma2) ->
+      typeptn (Gamma1, p2, tptn T2, Gamma2) ->
       typeptn (Gamma, ppair p1 p2, tptn (tpair T1 T2), Gamma2)
   with typepptn : (tenv * pptn * ty * tenv) -> Prop :=
   | TPP_Dol : forall Gamma T, typepptn (Gamma, ppdol, tpptn T [T], Gamma)
@@ -247,16 +272,16 @@ Module Egison.
       evalms2 svv gvv1 svv2
 
   with evalms3 : (list (list ms)) -> (list env) -> Prop :=
-  | Ems3_nil : evalms3 [[]] []
+  | Ems3_Nil : evalms3 [[]] []
   | Ems3 : forall svv gv svv1 dv gdv, evalms2 svv gv svv1 -> evalms3 svv1 dv -> gdv = gv ++ dv ->
                              evalms3 svv gdv
 
   with evalma : env -> ma -> list (list ma) -> env -> Prop :=
   | Ema_Some : forall x g v d, evalma g (pvar x, esm, d, v) [[]] (x |-> v)
-  | Ema_Ppfail : forall p g pp m sv pv d v avv g1,
+  | Ema_PpFail : forall p g pp m sv pv d v avv g1,
       evalpp pp g p None -> evalma g (p,(emtc pv),d,v) avv g1 ->
       evalma g (p,emtc ((pp,m,sv)::pv),d,v) avv g1
-  | Ema_Dpfail : forall p g pp m dp n sv pv d v pv1 d1 avv g1,
+  | Ema_DpFail : forall p g pp m dp n sv pv d v pv1 d1 avv g1,
       evalpp pp g p (Some (pv1, d1)) -> evaldp dp v None ->
       evalma g (p, emtc ((pp,m,sv)::pv),d,v) avv g1 ->
       evalma g (p, emtc ((pp,m,(dp,n)::sv)::pv),d,v) avv g1
@@ -313,5 +338,20 @@ Module Egison.
       + repeat econstructor.
       + repeat econstructor.
     - repeat econstructor.
- Qed.
+  Qed.
+  
+  Theorem unordered_pair_type_example : type (empty, match_all_example, tcll (ttpl tint tint), empty).
+  Proof.
+    econstructor.
+    - repeat econstructor.
+    - econstructor.
+      econstructor.
+      + eapply TM_2.
+        * repeat econstructor.
+        * repeat econstructor.
+        * repeat econstructor.
+      + repeat econstructor.
+    - repeat econstructor.
+    - repeat econstructor.
+  Qed.
 End Egison.
