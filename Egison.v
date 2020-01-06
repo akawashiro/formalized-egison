@@ -36,6 +36,13 @@ Module Egison.
   | dpvar :  varid -> dptn
   | dppair :  dptn -> dptn -> dptn.
 
+   Scheme exp_m_ind  := Minimality for exp Sort Prop
+     with ptn_m_ind := Minimality for ptn Sort Prop
+     with pptn_m_ind := Minimality for pptn Sort Prop
+     with dptn_m_ind := Minimality for dptn Sort Prop.
+
+   Combined Scheme exp_all_ind from exp_m_ind, ptn_m_ind, pptn_m_ind, dptn_m_ind.
+   
    Inductive ty : Type :=
    | tint : ty
    | ttpl : ty -> ty -> ty
@@ -214,6 +221,16 @@ Module Egison.
       typedptn (Gamma, dp1, tdptn T1, Gamma1) ->
       typedptn (Gamma, dp2, tdptn T2, Gamma2) ->
       typedptn (Gamma, dppair dp1 dp2, tdptn (tpair T1 T2), Gamma1 @@ Gamma2).
+
+  Scheme type_m_ind  := Minimality for type Sort Prop
+    with typemcl_m_ind := Induction for typemcl Sort Prop
+    with typedpN_m_ind := Induction for typedpN Sort Prop
+    with typeptn_m_ind := Minimality for typeptn Sort Prop
+    with typepptn_m_ind := Induction for typepptn Sort Prop
+    with typedptn_m_ind := Induction for typedptn Sort Prop.
+
+  Combined Scheme type_all_ind from type_m_ind, typemcl_m_ind, typedpN_m_ind, typeptn_m_ind, typepptn_m_ind, typedptn_m_ind.
+  Check type_all_ind.
 
   Theorem T_Int_example : type (empty, (eint 10), tint, empty).
   Proof.
