@@ -15,3 +15,12 @@
       {[$tgt {tgt}]}]}))
 
 (match-all [1 2] unordered-pair {[<pair $a $b> [a b]]})
+
+(define $unordered-pair-2
+  (matcher
+    {[<pair $ $> [something something]
+      {[<Pair $x $y> {[x y] [y x]}]}]
+     [$ something
+      {[$tgt {tgt}]}]}))
+
+(match-all <Pair 1 2> unordered-pair-2 {[<pair $a $b> [a b]]})
