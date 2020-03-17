@@ -18,7 +18,7 @@
 \usepackage{lipsum}
 
 % Turn on the style
-\pagestyle{fancy}
+% \pagestyle{fancy}
 % Clear the header and footer
 \fancyhead{}
 \fancyfoot{}
@@ -145,6 +145,76 @@
     \end{gather*}
     \caption{Formal semantics of our language}
     \label{fig:formal-semantics}
+\end{figure}
+
+\begin{figure}[!t]
+  \scriptsize
+  \begin{gather*}
+  \intertext{Evaluation of \texttt{matcher} and \texttt{match-all-dfs}:}
+    \AXC{}
+    \UIC{$\ev{\Gamma}{\texttt{(matcher $\texttt{[$pp_i$ $M_i$ $\texttt{[$dp_{ij}$ $N_{ij}$]}_j$]}_i$)}} ([pp_i, M_i, [dp_{ij}, N_{ij}]_j]_i,\Gamma)$}
+    \DP
+    \\
+    \AXC{$\ev{\Gamma}{M} v$}
+    \AXC{$\ev{\Gamma}{N} m$}
+    \AXC{$[[\matom{p}{m}{v}],\Gamma,\emptyset] \rightarrow [\Delta_i]_i $}
+    \AXC{$\ev{\Gamma \cup \Delta_i}{L} v_i \quad (\forall i)$}
+    \QIC{$\ev{\Gamma}{\texttt{(match-all-dfs $M$ $N$ [$p$ $L$])}} [v_i]_i$}
+    \DP
+  \intertext{Matching states:}
+    \AXC{$\vec{s} \rightarrow \vec{\Delta'}$}
+    \UIC{$(\epsilon, \Gamma, \Delta):\vec{s} \rightarrow \Delta : \vec{\Delta'}$}
+    \DP
+    \\
+    \AXC{$\mfun{p}{\Gamma \cup \Delta}{m}{v} [\vec{a}_i]_i, \Delta'$}
+    \AXC{$[\vec{a}_i + \vec{a}, \Gamma, \Delta \cup \Delta']_i + \vec{s} \rightarrow \vec{\Delta''}$}
+    \BIC{$((\matom{p}{m}{v}) \cons \vec{a}, \Gamma, \Delta):\vec{s} \rightarrow \vec{\Delta''}$}
+    \DP
+  \intertext{Matching atoms:}
+    \AXC{$\mathstrut$}
+    \UIC{$\mfun{\texttt{\$x}}{\Gamma}{\texttt{something}}{v} [\epsilon], \set{x \mapsto v}$}
+    \DP
+    \quad
+    \AXC{$\ppm{pp}{\Gamma}{p} \textbf{fail}$}
+    \AXC{$\mfun{p}{\Gamma}{(\vec{\phi},\Delta)}{v} \vec{\vec{a}}, \Gamma'$}
+    \BIC{$\mfun{p}{\Gamma}{((pp,M,\vec{\sigma}) \cons \vec{\phi},\Delta)}{v} \vec{\vec{a}}, \Gamma'$}
+    \DP
+    \\
+    \AXC{$\ppm{pp}{\Gamma}{p} [p'_i]_i, \Delta'$}
+    \AXC{$\pdm{dp}{v} \textbf{fail}$}
+    \AXC{$\mfun{p}{\Gamma}{((pp,M,\vec{\sigma}) \cons \vec{\phi},\Delta)}{v} \vec{\vec{a}}, \Gamma'$}
+    \TIC{$\mfun{p}{\Gamma}{((pp,M,(dp,N) \cons \vec{\sigma}) \cons \vec{\phi},\Delta)}{v} \vec{\vec{a}}, \Gamma'$}
+    \DP
+    \\
+    \AXC{$\ppm{pp}{\Gamma}{p} [p'_j]_j, \Delta'$}
+    \AXC{$\pdm{dp}{v} \Delta''$}
+    \AXC{$\ev{\Delta \cup \Delta' \cup \Delta''}{N} [[v'_{ij}]_j]_i$}
+    \AXC{$\ev{\Delta}{M} [m'_j]_j$}
+    \QIC{$\mfun{p}{\Gamma}{((pp,M,(dp,N) \cons \vec{\sigma}) \cons \vec{\phi},\Delta)}{v} [[\matom{p'_j}{m'_j}{v'_{ij}}]_j]_i, \emptyset$}
+    \DP
+  \intertext{Pattern matching on patterns:}
+    \AXC{$\mathstrut$}
+    \UIC{$\ppm{\texttt{\$}}{\Gamma}{p} [p], \emptyset$}
+    \DP
+    \quad
+    \AXC{$\ev{\Gamma}{M} v$}
+    \UIC{$\ppm{\texttt{,\$y}}{\Gamma}{\texttt{,$M$}} \epsilon, \set{y \mapsto v}$}
+    \DP
+    \quad
+    \AXC{$\ppm{pp_i}{\Gamma}{p_i} \vec{p}_i, \Gamma_i \quad (\forall i)$}
+    \UIC{$\ppm{\texttt{<C $pp_1 \ldots pp_n$>}}{\Gamma}{\texttt{<C $p_1 \ldots p_n$>}} \sum_i \vec{p}_i, \bigcup_i \Gamma_i$}
+    \DP
+  \intertext{Pattern matching on data:}
+    \AXC{$\mathstrut$}
+    \UIC{$\pdm{\texttt{\$z}}{v} \set{z \mapsto v}$}
+    \DP
+    \qquad
+    \AXC{$\pdm{dp_i}{v_i} \Gamma_i \quad (\forall i)$}
+    \UIC{$\pdm{\texttt{<C $dp_1 \ldots dp_n$>}}{\texttt{<C $v_1 \ldots v_n$>}} \bigcup_i \Gamma_i$}
+    \DP
+  \end{gather*}
+  \caption{Formal semantics of our language using match-all-dfs}
+  \label{fig:formal-semantics}
 \end{figure}
 
 \begin{figure}

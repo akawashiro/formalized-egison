@@ -6,6 +6,7 @@ From Coq Require Import Strings.Ascii.
 From Coq Require Import Lists.List.
 From Coq Require Import Program.Basics.
 From Egison Require Import Maps.
+From Hammer Require Import Hammer.
 
 Module Egison.
 
@@ -335,6 +336,7 @@ Module Egison.
     (emal (epair (eint 1) (eint 2)) unordered_pair (ppair (pvar "a") (pvar "b"),etpl (evar "a") (evar "b"))).
   Theorem unordered_pair_example : eval (empty, match_all_example, ecll [etpl (eint 1) (eint 2);etpl (eint 2) (eint 1)]).
   Proof.
+    sauto.
     econstructor.
     - repeat econstructor.
     - repeat econstructor.
@@ -356,6 +358,13 @@ Module Egison.
       + repeat econstructor.
     - repeat econstructor.
   Qed.
+
+
+  Theorem unordered_pair_example : eval (empty, match_all_example, ecll [etpl (eint 1) (eint 2);etpl (eint 2) (eint 1)]).
+  Proof.
+    hammer.
+    Admit.
+    Qed.
   
   Theorem unordered_pair_type_example : type (empty, match_all_example, tcll (ttpl tint tint), empty).
   Proof.
