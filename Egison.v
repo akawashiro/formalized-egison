@@ -371,4 +371,6 @@ Module Egison.
     - repeat econstructor.
     - repeat econstructor.
   Qed.
+
+  Theorem type_soundness : forall M T, type (empty, M, T, empty) -> exists v, eval (empty, M, v) /\ type (empty, v, T, empty) /\ value v.
 End Egison.
